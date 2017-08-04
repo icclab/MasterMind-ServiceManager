@@ -1,0 +1,100 @@
+from docker.types.services import (ServiceMode, EndpointSpec)
+from typing import (List, Dict)
+
+from .service import (Service, SERVICE_KEYS)
+
+
+def load_services(stack_name, services_dict, cli):
+    # type: (str, Dict, docker.DockerClient) -> List[Service]
+
+    services = list()
+    for service_name, service_attr in services_dict.items():
+        service_configuration_dict = get_service_configuration(stack_name,
+                                                               service_attr)
+        service = Service(
+            name=stack_name + "_" + service_name,
+            client=cli,
+            stack_name=stack_name,
+            **service_configuration_dict
+        )
+        services.append(service)
+    return services
+
+
+def get_service_configuration(stack_name, config_dict):
+    # type: (str, Dict) -> Dict
+    services_attr_dict = dict()
+    for key in SERVICE_KEYS:
+        if key in config_dict:
+            services_attr_dict[key] = config_dict[key]
+
+    # Attributes that need special handling
+    if "ports"in config_dict:
+        services_attr_dict["endpoint_spec"] = get_service_endpoint_spec(
+            config_dict["ports"])
+
+    services_attr_dict["labels"] = {}
+
+    # Associating the service to the stack
+    services_attr_dict["labels"]["com.docker.stack.namespace"] = stack_name
+
+    if "deploy" in config_dict:
+        if "replicas" in config_dict["deploy"].keys():
+            services_attr_dict["mode"] = get_service_mode(
+                replicas=config_dict["deploy"].get("replicas"))
+
+        if "labels" in config_dict["deploy"].keys():
+            services_attr_dict["labels"] = config_dict["deploy"].get("labels")
+
+    if "command" in config_dict:
+        if isinstance(config_dict["command"], list):
+            services_attr_dict["args"] = config_dict["command"]
+        elif isinstance(config_dict["command"], str):
+            services_attr_dict["args"] = [config_dict["command"]]
+        else:
+            raise TypeError
+
+    if "networks" in config_dict:
+        services_attr_dict["networks"] = [stack_name + "_" + network
+                                          for network in
+                                          config_dict["networks"]]
+
+    if "labels" in config_dict:
+        if isinstance(config_dict["labels"], dict):
+            services_attr_dict["container_labels"] = config_dict["labels"]
+        elif isinstance(config_dict["labels"], list):
+            services_attr_dict["container_labels"] = \
+                get_service_labels(config_dict["labels"])
+    return services_attr_dict
+
+
+def get_service_endpoint_spec(ports):
+    # type: (List[str]) -> EndpointSpec
+
+    # This function needs more validation as there are different ways
+    # to declare ports in a compose file
+    # At the moment only "8000:8000" is supported
+    ports_dict = dict()
+    for p in ports:
+        p_str = p.split(":")
+        ports_dict[int(p_str[0])] = int(p_str[1])
+    return EndpointSpec(ports=ports_dict)
+
+
+def get_service_labels(labels):
+    # type: (List[str]) -> Dict
+    label_dict = dict()
+    for label in labels:
+        try:
+            label_key, label_value = label.split("=")
+            label_dict[label_key] = label_value
+        # In case the label doesn"t have any value a ValueError will be raised
+        # this handles this exception adding the label without value
+        except ValueError:
+            label_dict[label] = ""
+    return label_dict
+
+
+def get_service_mode(mode="replicated", replicas=None):
+    # type: (str, int) -> ServiceMode
+    return ServiceMode(mode=mode, replicas=replicas)
