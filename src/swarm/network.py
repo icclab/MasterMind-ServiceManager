@@ -73,8 +73,7 @@ class Network(object):
             raise NotImplementedError
 
 
-def load_networks(stack_name, network_dict, cli):
-    # type: (str, Dict, docker.DockerClient) -> List[Network]
+def load_networks(stack_name: str, network_dict: dict, cli: docker.DockerClient) -> List[Network]:
     networks = list()
     for network_name, network_attr in network_dict.items():
         network_configuration_dict = get_network_configuration(stack_name,
@@ -89,8 +88,7 @@ def load_networks(stack_name, network_dict, cli):
     return networks
 
 
-def get_network_configuration(stack_name, config_dict):
-    # type: (str, Dict) -> Dict
+def get_network_configuration(stack_name: str, config_dict: dict) -> dict:
     network_attr_dict = dict()
     for key in NETWORK_KEYS:
         if key in config_dict:

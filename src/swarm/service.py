@@ -16,8 +16,8 @@
 # AUTHOR: Bruno Grazioli
 
 import docker
-from docker.types.services import (ServiceMode, EndpointSpec)
-from typing import (List, Dict)
+from docker.types.services import ServiceMode, EndpointSpec
+from typing import List
 
 
 SERVICE_KEYS = [
@@ -96,9 +96,7 @@ class Service(object):
                                     networks=self.networks)
 
 
-def load_services(stack_name, services_dict, cli):
-    # type: (str, Dict, docker.DockerClient) -> List[Service]
-
+def load_services(stack_name: str, services_dict: dict, cli: docker.DockerClient) -> List[Service]:
     services = list()
     for service_name, service_attr in services_dict.items():
         service_configuration_dict = get_service_configuration(stack_name,
@@ -113,8 +111,7 @@ def load_services(stack_name, services_dict, cli):
     return services
 
 
-def get_service_configuration(stack_name, config_dict):
-    # type: (str, Dict) -> Dict
+def get_service_configuration(stack_name: str, config_dict: dict) -> dict:
     services_attr_dict = dict()
     for key in SERVICE_KEYS:
         if key in config_dict:
@@ -160,9 +157,7 @@ def get_service_configuration(stack_name, config_dict):
     return services_attr_dict
 
 
-def get_service_endpoint_spec(ports):
-    # type: (List[str]) -> EndpointSpec
-
+def get_service_endpoint_spec(ports: List[str]) -> EndpointSpec:
     # This function needs more validation as there are different ways
     # to declare ports in a compose file
     # At the moment only "8000:8000" is supported
@@ -173,8 +168,7 @@ def get_service_endpoint_spec(ports):
     return EndpointSpec(ports=ports_dict)
 
 
-def get_service_labels(labels):
-    # type: (List[str]) -> Dict
+def get_service_labels(labels: List[str]) -> dict:
     label_dict = dict()
     for label in labels:
         try:
@@ -187,6 +181,5 @@ def get_service_labels(labels):
     return label_dict
 
 
-def get_service_mode(mode="replicated", replicas=None):
-    # type: (str, int) -> ServiceMode
+def get_service_mode(mode: str="replicated", replicas: int=None) -> ServiceMode:
     return ServiceMode(mode=mode, replicas=replicas)
