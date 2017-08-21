@@ -15,11 +15,13 @@
 #
 # AUTHOR: Bruno Grazioli
 
+from __future__ import absolute_import
 from typing import (List, Dict)
+from yaml import safe_load
 
-from ..network.utils import load_networks
-from ..service.utils import (load_services)
-from ..utils import parse_compose_file
+import docker
+from .network import load_networks
+from .service import (load_services)
 
 
 def create_stack(stack_name, compose_file, cli):
@@ -116,3 +118,10 @@ def get_stack_networks(stack_name, client):
     for network in stack_networks_id:
         stack_networks.append(client.networks.get(network))
     return stack_networks
+
+
+def parse_compose_file(compose):
+    # type: (str) -> Dict
+
+    compose_parsed = safe_load(compose)
+    return compose_parsed
