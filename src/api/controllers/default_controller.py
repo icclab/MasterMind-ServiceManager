@@ -1,5 +1,5 @@
 import docker
-from swarm.stack import (create_stack, get_stack_health, remove_stack)
+from src.swarm.stack import (create_stack, get_stack_health, remove_stack)
 
 
 def get_engine_status(engine) -> str:
@@ -38,4 +38,6 @@ def update_stack(stack) -> str:
 
 
 def get_client(cli):
-    return docker.DockerClient(base_url=cli['engine-url'], version="1.26", tls=False)
+    return docker.DockerClient(base_url=cli['engine-url'],
+                               version="1.26",
+                               tls=False)
