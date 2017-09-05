@@ -15,16 +15,17 @@
 #
 # AUTHOR: Bruno Grazioli
 
+from __future__ import absolute_import
 from typing import (List, Dict)
 
-from ..network.utils import load_networks
-from ..service.utils import (load_services)
-from ..utils import parse_compose_file
+from yaml import safe_load
+import docker
+
+from .network import load_networks, Network
+from .service import load_services, Service
 
 
-def create_stack(stack_name, compose_file, cli):
-    # type: (str, str, docker.DockerClient) -> None
-
+def create_stack(stack_name: str, compose_file: str, cli: docker.DockerClient) -> None:
     # Check if stack_name is already in use
     if get_stack_services(stack_name, cli):
         raise NotImplementedError
@@ -48,9 +49,7 @@ def create_stack(stack_name, compose_file, cli):
         service.create()
 
 
-def remove_stack(stack_name, client):
-    # type: (str, docker.DockerClient) -> None
-
+def remove_stack(stack_name: str, client: docker.DockerClient) -> None:
     service_list = get_stack_services(stack_name, client)
     for service in service_list:
         service.remove()
@@ -60,7 +59,7 @@ def remove_stack(stack_name, client):
         network.remove()
 
 
-def get_stack_health(name, client):
+def get_stack_health(name: str, client: docker.DockerClient) -> list:
     # type: (str, docker.DockerClient) -> List[Dict]
     service_list = get_stack_services(name, client)
 
@@ -83,9 +82,7 @@ def get_stack_health(name, client):
     return stack_status
 
 
-def get_stack_services(stack_name, client):
-    # type: (str, docker.DockerClient) -> List[Service]
-
+def get_stack_services(stack_name: str, client: docker.DockerClient) -> List[Service]:
     stack_services = list()
     service_list = client.services.list(filters={'name': stack_name})
 
@@ -101,9 +98,7 @@ def get_stack_services(stack_name, client):
     return stack_services
 
 
-def get_stack_networks(stack_name, client):
-    # type: (str, docker.DockerClient) -> List[Network]
-
+def get_stack_networks(stack_name: str, client: docker.DockerClient) -> List[Network]:
     stack_networks = list()
     network_list = client.networks.list(names=[stack_name])
 
@@ -116,3 +111,8 @@ def get_stack_networks(stack_name, client):
     for network in stack_networks_id:
         stack_networks.append(client.networks.get(network))
     return stack_networks
+
+
+def parse_compose_file(compose: str) -> dict:
+    compose_parsed = safe_load(compose)
+    return compose_parsed

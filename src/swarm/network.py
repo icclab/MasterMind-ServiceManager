@@ -15,6 +15,10 @@
 #
 # AUTHOR: Bruno Grazioli
 
+
+from typing import (List, Dict)
+import docker
+
 NETWORK_KEYS = [
     "driver",
     "options",
@@ -67,3 +71,31 @@ class Network(object):
     def check_external_network(self):
         if not self.client.networks.list(names=self.name):
             raise NotImplementedError
+
+
+def load_networks(stack_name: str, network_dict: dict, cli: docker.DockerClient) -> List[Network]:
+    networks = list()
+    for network_name, network_attr in network_dict.items():
+        network_configuration_dict = get_network_configuration(stack_name,
+                                                               network_attr)
+        network = Network(
+            name=stack_name + "_" + network_name,
+            client=cli,
+            stack_name=stack_name,
+            **network_configuration_dict
+        )
+        networks.append(network)
+    return networks
+
+
+def get_network_configuration(stack_name: str, config_dict: dict) -> dict:
+    network_attr_dict = dict()
+    for key in NETWORK_KEYS:
+        if key in config_dict:
+            network_attr_dict[key] = config_dict[key]
+
+    # if hasattr(config_dict, "external"):
+        # check_external_network()
+    network_attr_dict["labels"] = dict()
+    network_attr_dict["labels"]["com.docker.stack.namespace"] = stack_name
+    return network_attr_dict
