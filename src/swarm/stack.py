@@ -18,9 +18,8 @@
 from __future__ import absolute_import
 from typing import (List, Dict, Union)
 
-from yaml import safe_load
 from docker import DockerClient
-from docker.models import (services, networks, volumes)
+from docker.models import (services, networks)
 
 from .network import (Network, load_networks)
 from .service import (Service, load_services)
@@ -33,32 +32,30 @@ def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
 
 
 def create_stack(stack_name: str,
-                 compose_file: str,
+                 compose_file: Dict,
                  cli: DockerClient) -> None:
 
     # Check if stack_name is already in use
     if get_stack_services(stack_name, cli):
         raise NotImplementedError
 
-    compose_file_dict = parse_compose_file(compose_file)
-
     network_list = load_networks(
         stack_name,
-        compose_file_dict.get("networks"),
+        compose_file.get("networks"),
         cli
     )
     create(network_list)
 
     volume_list = load_volumes(
         stack_name,
-        compose_file_dict.get('volumes'),
+        compose_file.get('volumes'),
         cli
     )
     create(volume_list)
 
     service_list = load_services(
         stack_name,
-        compose_file_dict.get("services"),
+        compose_file.get("services"),
         cli
     )
     create(service_list)
@@ -130,7 +127,3 @@ def get_stack_networks(stack_name: str,
         stack_networks.append(client.networks.get(network))
     return stack_networks
 
-
-def parse_compose_file(compose: str) -> Dict:
-    compose_parsed = safe_load(compose)
-    return compose_parsed

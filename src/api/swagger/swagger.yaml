@@ -2,14 +2,14 @@
 swagger: "2.0"
 info:
   description: ""
-  version: "1.0.0"
+  version: "0.1.0"
   title: "MasterMind Service Manager"
   contact:
     email: "gaea@zhaw.ch"
   license:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "a"
+host: "127.0.0.1"
 basePath: "/v1"
 schemes:
 - "http"
@@ -98,7 +98,7 @@ paths:
         required: true
         type: "string"
       - in: "body"
-        name: "getStack"
+        name: "stack_parameters"
         description: ""
         required: true
         schema:
@@ -111,8 +111,8 @@ paths:
     delete:
       tags:
       - "Stack"
-      summary: "Delete services of a stack"
-      description: "Delete services of a stack"
+      summary: "Delete services and networks of a stack"
+      description: "Delete services and networks of a stack"
       operationId: "controllers.default_controller.delete_stack"
       produces:
       - "application/json"
@@ -123,7 +123,7 @@ paths:
         required: true
         type: "string"
       - in: "body"
-        name: "deleteStack"
+        name: "stack_parameters"
         description: ""
         required: true
         schema:
@@ -152,4 +152,6 @@ definitions:
       compose-file:
         type: "string"
       engine-url:
+        type: "string"
+      compose-vars:
         type: "string"
