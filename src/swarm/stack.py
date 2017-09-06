@@ -16,40 +16,52 @@
 # AUTHOR: Bruno Grazioli
 
 from __future__ import absolute_import
-from typing import (List, Dict)
+from typing import (List, Dict, Union)
 
-from yaml import safe_load
-import docker
+from docker import DockerClient
+from docker.models import (services, networks)
 
-from .network import load_networks, Network
-from .service import load_services, Service
+from .network import (Network, load_networks)
+from .service import (Service, load_services)
+from .volume import (Volume, load_volumes)
 
 
-def create_stack(stack_name: str, compose_file: str, cli: docker.DockerClient) -> None:
+def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
+    for obj in obj_list:
+        obj.create()
+
+
+def create_stack(stack_name: str,
+                 compose_file: Dict,
+                 cli: DockerClient) -> None:
+
     # Check if stack_name is already in use
     if get_stack_services(stack_name, cli):
         raise NotImplementedError
 
-    compose_file_dict = parse_compose_file(compose_file)
-
     network_list = load_networks(
         stack_name,
-        compose_file_dict.get("networks"),
+        compose_file.get("networks"),
         cli
     )
-    for network in network_list:
-        network.create()
+    create(network_list)
+
+    volume_list = load_volumes(
+        stack_name,
+        compose_file.get('volumes'),
+        cli
+    )
+    create(volume_list)
 
     service_list = load_services(
         stack_name,
-        compose_file_dict.get("services"),
+        compose_file.get("services"),
         cli
     )
-    for service in service_list:
-        service.create()
+    create(service_list)
 
 
-def remove_stack(stack_name: str, client: docker.DockerClient) -> None:
+def remove_stack(stack_name: str, client: DockerClient) -> None:
     service_list = get_stack_services(stack_name, client)
     for service in service_list:
         service.remove()
@@ -59,8 +71,7 @@ def remove_stack(stack_name: str, client: docker.DockerClient) -> None:
         network.remove()
 
 
-def get_stack_health(name: str, client: docker.DockerClient) -> list:
-    # type: (str, docker.DockerClient) -> List[Dict]
+def get_stack_health(name: str, client: DockerClient) -> list:
     service_list = get_stack_services(name, client)
 
     stack_status = list()
@@ -82,7 +93,9 @@ def get_stack_health(name: str, client: docker.DockerClient) -> list:
     return stack_status
 
 
-def get_stack_services(stack_name: str, client: docker.DockerClient) -> List[Service]:
+def get_stack_services(stack_name: str,
+                       client: DockerClient) -> List[services.Service]:
+
     stack_services = list()
     service_list = client.services.list(filters={'name': stack_name})
 
@@ -98,7 +111,9 @@ def get_stack_services(stack_name: str, client: docker.DockerClient) -> List[Ser
     return stack_services
 
 
-def get_stack_networks(stack_name: str, client: docker.DockerClient) -> List[Network]:
+def get_stack_networks(stack_name: str,
+                       client: DockerClient) -> List[networks.Network]:
+
     stack_networks = list()
     network_list = client.networks.list(names=[stack_name])
 
@@ -112,7 +127,3 @@ def get_stack_networks(stack_name: str, client: docker.DockerClient) -> List[Net
         stack_networks.append(client.networks.get(network))
     return stack_networks
 
-
-def parse_compose_file(compose: str) -> dict:
-    compose_parsed = safe_load(compose)
-    return compose_parsed
