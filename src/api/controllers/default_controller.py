@@ -16,47 +16,60 @@
 # AUTHOR: Bruno Grazioli
 
 import docker
+import docker.errors as docker_errs
 from jinja2 import Template
 
+from requests.exceptions import ConnectionError
 from src.swarm.stack import (create_stack, get_stack_health, remove_stack)
-from typing import Dict
+from typing import Dict, Tuple
 from yaml import safe_load
 
 
-def get_engine_status(engine) -> str:
+def get_engine_status(engine) -> Tuple[Dict, int]:
     cli = get_client(engine)
     try:
         cli.ping()
-    except:
-        raise NotImplemented
-    return ''
+    except docker_errs.APIError:
+        return {"status": 400, "message": "Docker API Error"}, 400
+    except ConnectionError:
+        return {"status": 400, "message": "Server not responding"}, 400
+    return {"status": 200, "message": "Docker engine reachable"}, 200
 
 
-def delete_stack(name, stack_parameters) -> str:
+def delete_stack(name, stack_parameters) -> Tuple[Dict, int]:
     cli = get_client(stack_parameters)
 
-    remove_stack(name, cli)
-    return ''
+    try:
+        remove_stack(name, cli)
+    except docker_errs.APIError:
+        return {"status": 400, "message": "Docker API Error"}, 400
+    except ConnectionError:
+        return {"status": 400, "message": "Server not responding"}, 400
+    return {"status": 204, "message": "Stack {0} deleted".format(name)}, 204
 
 
-def deploy_stack(stack) -> str:
+def deploy_stack(stack) -> Tuple[Dict, int]:
     cli = get_client(stack)
     stack_name = stack['name']
     compose = parse_compose_file(stack['compose-file'], stack['compose-vars'])
 
-    create_stack(stack_name, compose, cli)
-
-    return ''
+    try:
+        create_stack(stack_name, compose, cli)
+    except ConnectionError as err:
+        return {"status": 400, "message": "Connection error, "
+                "please check if the engine-url is set "
+                "correctly and is reachable"}, 400
+    return {"status": 201, "message": "Stack successfully deployed!"}, 201
 
 
 def get_stack_status(name, stack_parameters) -> str:
     cli = get_client(stack_parameters)
-    get_stack_health(name, cli)
-    return ''
+    status = get_stack_health(name, cli)
+    return str(status)
 
 
 def update_stack(stack) -> str:
-    return ''
+    return 'Stack updated'
 
 
 def get_client(cli):
