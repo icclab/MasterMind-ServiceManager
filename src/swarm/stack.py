@@ -16,13 +16,20 @@
 # AUTHOR: Bruno Grazioli
 
 from __future__ import absolute_import
-from typing import (List, Dict)
+from typing import (List, Dict, Union)
 
 from yaml import safe_load
 from docker import DockerClient
+from docker.models import (services, networks, volumes)
 
-from .network import load_networks
-from .service import load_services
+from .network import (Network, load_networks)
+from .service import (Service, load_services)
+from .volume import (Volume, load_volumes)
+
+
+def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
+    for obj in obj_list:
+        obj.create()
 
 
 def create_stack(stack_name: str,
@@ -40,16 +47,21 @@ def create_stack(stack_name: str,
         compose_file_dict.get("networks"),
         cli
     )
-    for network in network_list:
-        network.create()
+    create(network_list)
+
+    volume_list = load_volumes(
+        stack_name,
+        compose_file_dict.get('volumes'),
+        cli
+    )
+    create(volume_list)
 
     service_list = load_services(
         stack_name,
         compose_file_dict.get("services"),
         cli
     )
-    for service in service_list:
-        service.create()
+    create(service_list)
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:
@@ -85,7 +97,7 @@ def get_stack_health(name: str, client: DockerClient) -> list:
 
 
 def get_stack_services(stack_name: str,
-                       client: DockerClient) -> List[DockerClient.services]:
+                       client: DockerClient) -> List[services.Service]:
 
     stack_services = list()
     service_list = client.services.list(filters={'name': stack_name})
@@ -103,7 +115,7 @@ def get_stack_services(stack_name: str,
 
 
 def get_stack_networks(stack_name: str,
-                       client: DockerClient) -> List[DockerClient.networks]:
+                       client: DockerClient) -> List[networks.Network]:
 
     stack_networks = list()
     network_list = client.networks.list(names=[stack_name])

@@ -22,6 +22,7 @@ VOLUME_KEYS = [
     "driver",
     "driver_opts",
     "labels"
+    "external"
 ]
 
 
@@ -30,13 +31,13 @@ class Volume(object):
                  name,
                  client=None,
                  driver=None,
-                 options=None,
+                 driver_opts=None,
                  labels=None
                  ):
         self.client = client
         self.name = name
         self.driver = driver
-        self.options = options
+        self.driver_opts = driver_opts
         self.labels = labels or {}
 
     def __repr__(self):
@@ -45,7 +46,7 @@ class Volume(object):
     def create(self):
         self.client.volumes.create(name=self.name,
                                    driver=self.driver,
-                                   options=self.options,
+                                   driver_opts=self.driver_opts,
                                    labels=self.labels)
 
 
@@ -55,7 +56,7 @@ def load_volumes(stack_name: str,
 
     volumes = list()
     for volume_name, volume_attr in volume_dict.items():
-        volume_configuration_dict = get_volume_configuration(stack_name,
+        volume_configuration_dict = set_volume_configuration(stack_name,
                                                              volume_attr)
         volume = Volume(
             name=stack_name + "_" + volume_name,
@@ -66,14 +67,16 @@ def load_volumes(stack_name: str,
     return volumes
 
 
-def get_volume_configuration(stack_name: str,
+def set_volume_configuration(stack_name: str,
                              config_dict: Dict) -> Dict:
 
     volume_attr_dict = dict()
-    for key in VOLUME_KEYS:
-        if key in config_dict:
-            volume_attr_dict[key] = config_dict[key]
-
     volume_attr_dict["labels"] = dict()
     volume_attr_dict["labels"]["com.docker.stack.namespace"] = stack_name
+
+    if config_dict:
+        for key in VOLUME_KEYS:
+            if key in config_dict:
+                volume_attr_dict[key] = config_dict[key]
+
     return volume_attr_dict
