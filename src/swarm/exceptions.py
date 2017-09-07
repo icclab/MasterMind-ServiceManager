@@ -16,5 +16,17 @@
 # AUTHOR: Bruno Grazioli
 
 
-class StackNameAlreadyInUse(Exception):
+class StackNameExists(Exception):
+    pass
+
+
+class NetworkNotFound(Exception):
+    pass
+
+
+class VolumeNotFound(Exception):
+    pass
+
+
+class InvalidYAMLFile(Exception):
     pass

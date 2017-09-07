@@ -21,10 +21,11 @@ from jinja2 import Template
 
 from requests.exceptions import ConnectionError
 from typing import (Dict, Tuple)
-from yaml import safe_load
+from yaml import (safe_load, scanner)
 
-from src.swarm.stack import (create_stack, get_stack_health, remove_stack)
-from src.swarm.exceptions import StackNameAlreadyInUse
+from swarm.stack import (create_stack, get_stack_health, remove_stack)
+from swarm.exceptions import (NetworkNotFound, StackNameExists,
+                              VolumeNotFound, InvalidYAMLFile)
 
 
 def get_engine_status(engine) -> Tuple[Dict, int]:
@@ -57,16 +58,23 @@ def delete_stack(name, stack_parameters) -> Tuple[Dict, int]:
 def deploy_stack(stack) -> Tuple[Dict, int]:
     cli = get_client(stack)
     stack_name = stack['name']
-    compose = parse_compose_file(stack['compose-file'], stack['compose-vars'])
 
     try:
+        compose = parse_compose_file(stack['compose-file'],
+                                     stack['compose-vars'])
         service_list = create_stack(stack_name, compose, cli)
+    except InvalidYAMLFile:
+        return response(400, "Invalid yaml file.")
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the engine-url is set "
                              "correctly and is reachable")
-    except StackNameAlreadyInUse:
+    except StackNameExists:
         return response(400, "Stack name already in use")
+    except NetworkNotFound:
+        return response(400, "External network not found!")
+    except VolumeNotFound:
+        return response(400, "External volume not found!")
     return response(201, "Stack successfully deployed!",
                     {"services": [service.name for service in service_list]})
 
@@ -74,7 +82,7 @@ def deploy_stack(stack) -> Tuple[Dict, int]:
 def get_stack_status(name, stack_parameters) -> Tuple[Dict, int]:
     cli = get_client(stack_parameters)
     status = get_stack_health(name, cli)
-    return {"status": 200, "message": "OK", "stack_status": status}, 200
+    return response(200, "OK", {"stack_status": status})
 
 
 def update_stack(stack) -> str:
@@ -87,16 +95,19 @@ def get_client(cli):
                                tls=False)
 
 
-def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
-    if compose_vars:
-        compose_template = Template(compose)
-        compose_vars_yaml = safe_load(compose_vars)
-        compose_yaml = compose_template.render(compose_vars_yaml)
-    else:
-        compose_yaml = safe_load(compose)
+def parse_compose_file(compose: str, compose_vars: str = None) -> Dict:
+    try:
+        if compose_vars:
+            compose_template = Template(compose)
+            compose_vars_yaml = safe_load(compose_vars)
+            compose_yaml = compose_template.render(compose_vars_yaml)
+        else:
+            compose_yaml = safe_load(compose)
 
-    return safe_load(compose_yaml)
+        return safe_load(compose_yaml)
+    except scanner.ScannerError:
+        raise InvalidYAMLFile
 
 
-def response(status_code: int, message: str, *args) -> Tuple(Dict, int):
+def response(status_code: int, message: str, *args) -> Tuple[Dict, int]:
     return dict(status=status_code, message=message, *args), status_code

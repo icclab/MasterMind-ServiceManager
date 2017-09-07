@@ -18,6 +18,8 @@
 from docker import DockerClient
 from typing import (List, Dict)
 
+from .exceptions import NetworkNotFound
+
 NETWORK_KEYS = [
     "driver",
     "options",
@@ -69,7 +71,7 @@ class Network(object):
 
     def check_external_network(self):
         if not self.client.networks.list(names=self.name):
-            raise NotImplementedError
+            raise NetworkNotFound
 
 
 def load_networks(stack_name: str,

@@ -21,7 +21,7 @@ from typing import (List, Dict, Union)
 from docker import DockerClient
 from docker.models import (services, networks)
 
-from .exceptions import StackNameAlreadyInUse
+from .exceptions import StackNameExists
 from .network import (Network, load_networks)
 from .service import (Service, load_services)
 from .volume import (Volume, load_volumes)
@@ -36,30 +36,35 @@ def create_stack(stack_name: str,
                  compose_file: Dict,
                  cli: DockerClient) -> List[Service]:
 
+    service_list = list()
+
     # Check if stack_name is already in use
     if get_stack_services(stack_name, cli):
-        raise StackNameAlreadyInUse
+        raise StackNameExists
 
-    network_list = load_networks(
-        stack_name,
-        compose_file.get("networks"),
-        cli
-    )
-    create(network_list)
+    if compose_file.get("networks"):
+        network_list = load_networks(
+            stack_name,
+            compose_file.get("networks"),
+            cli
+        )
+        create(network_list)
 
-    volume_list = load_volumes(
-        stack_name,
-        compose_file.get('volumes'),
-        cli
-    )
-    create(volume_list)
+    if compose_file.get("volumes"):
+        volume_list = load_volumes(
+            stack_name,
+            compose_file.get('volumes'),
+            cli
+        )
+        create(volume_list)
 
-    service_list = load_services(
-        stack_name,
-        compose_file.get("services"),
-        cli
-    )
-    create(service_list)
+    if compose_file.get("services"):
+        service_list = load_services(
+            stack_name,
+            compose_file.get("services"),
+            cli
+        )
+        create(service_list)
     return service_list
 
 

@@ -47,7 +47,7 @@ class Service(object):
             container_labels=None,
             client=None,
             endpoint_spec=None,
-            env=None,
+            environment=None,
             hostname=None,
             labels=None,
             log_driver=None,
@@ -69,7 +69,7 @@ class Service(object):
         self.client = client
         self.entrypoint = command
         self.endpoint_spec = None
-        self.environment = env
+        self.environment = environment
         self.hostname = hostname
         self.image = image
         self.labels = labels or {}
