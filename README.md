@@ -1,16 +1,25 @@
 # MasterMind-ServiceManager
 
-# Installing the MasterMind API 
+## Installing the MasterMind API
 
-run: 
- * `virtualenv .mm`
- * `python setup.py install`
+### Python virtualenv
 
-# Example usage of the API
+```
+virtualenv .mm
+python setup.py install
+```
+### Docker
+
+```
+docker build -t mastermind-sm .
+docker run -d -p 8080:8080 mastermind-sm
+```
+
+## Example usage of the API
 
 see: `src/api/controllers/default_controller.py`
 
-# Running the MasterMind API
+## Running the MasterMind API
 
 ```
 pip install -r src/requirements.txt
@@ -45,4 +54,3 @@ Your Swagger definition lives here:
 ```
 http://localhost:8080/v1/swagger.json
 ```
-
