@@ -21,6 +21,7 @@ from typing import (List, Dict, Union)
 from docker import DockerClient
 from docker.models import (services, networks)
 
+from .exceptions import StackNameAlreadyInUse
 from .network import (Network, load_networks)
 from .service import (Service, load_services)
 from .volume import (Volume, load_volumes)
@@ -33,11 +34,11 @@ def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
 
 def create_stack(stack_name: str,
                  compose_file: Dict,
-                 cli: DockerClient) -> None:
+                 cli: DockerClient) -> List[Service]:
 
     # Check if stack_name is already in use
     if get_stack_services(stack_name, cli):
-        raise NotImplementedError
+        raise StackNameAlreadyInUse
 
     network_list = load_networks(
         stack_name,
@@ -59,6 +60,7 @@ def create_stack(stack_name: str,
         cli
     )
     create(service_list)
+    return service_list
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:
@@ -71,7 +73,7 @@ def remove_stack(stack_name: str, client: DockerClient) -> None:
         network.remove()
 
 
-def get_stack_health(name: str, client: DockerClient) -> list:
+def get_stack_health(name: str, client: DockerClient) -> List[Dict]:
     service_list = get_stack_services(name, client)
 
     stack_status = list()
@@ -95,35 +97,40 @@ def get_stack_health(name: str, client: DockerClient) -> list:
 
 def get_stack_services(stack_name: str,
                        client: DockerClient) -> List[services.Service]:
-
     stack_services = list()
+    stack_service_ids = list()
     service_list = client.services.list(filters={'name': stack_name})
 
-    # TODO - Check if an exception is raised when the service has no labels
-    stack_services_id = [
-        service.attrs["ID"]
-        for service in service_list
-        if service.attrs["Spec"]["Labels"]["com.docker.stack.namespace"] ==
-        stack_name
-    ]
-    for service in stack_services_id:
+    for service in service_list:
+        try:
+            if service.attrs["Spec"]["Labels"]["com.docker.stack.namespace"] \
+                    == stack_name:
+                stack_service_ids.append(service.attrs["ID"])
+
+        # Jump to the next service in the list in case the service doesn't have
+        # the "com.docker.stack.namespace" label
+        except KeyError:
+            continue
+
+    for service in stack_service_ids:
         stack_services.append(client.services.get(service))
     return stack_services
 
 
 def get_stack_networks(stack_name: str,
                        client: DockerClient) -> List[networks.Network]:
-
     stack_networks = list()
+    stack_network_ids = list()
     network_list = client.networks.list(names=[stack_name])
 
-    # TODO - Check if an exception is raised when the network has no labels
-    stack_networks_id = [
-        network.attrs["Id"]
-        for network in network_list
-        if network.attrs["Labels"]["com.docker.stack.namespace"] == stack_name
-    ]
-    for network in stack_networks_id:
+    for network in network_list:
+        try:
+            if network.attrs["Labels"]["com.docker.stack.namespace"] \
+                    == stack_name:
+                stack_network_ids.append(network.attrs["Id"])
+        except KeyError:
+            continue
+
+    for network in stack_network_ids:
         stack_networks.append(client.networks.get(network))
     return stack_networks
-

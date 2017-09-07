@@ -27,13 +27,14 @@ VOLUME_KEYS = [
 
 
 class Volume(object):
-    def __init__(self,
-                 name,
-                 client=None,
-                 driver=None,
-                 driver_opts=None,
-                 labels=None
-                 ):
+    def __init__(
+            self,
+            name,
+            client=None,
+            driver=None,
+            driver_opts=None,
+            labels=None
+    ):
         self.client = client
         self.name = name
         self.driver = driver

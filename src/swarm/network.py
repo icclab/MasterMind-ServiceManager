@@ -29,18 +29,19 @@ NETWORK_KEYS = [
 
 
 class Network(object):
-    def __init__(self,
-                 name,
-                 client=None,
-                 driver=None,
-                 external=False,
-                 options=None,
-                 ipam=None,
-                 check_duplicate=True,
-                 internal=False,
-                 labels=None,
-                 enable_ipv6=False,
-                 stack_name=None):
+    def __init__(
+            self,
+            name,
+            client=None,
+            driver=None,
+            external=False,
+            options=None,
+            ipam=None,
+            check_duplicate=True,
+            internal=False,
+            labels=None,
+            enable_ipv6=False,
+    ):
         self.client = client
         self.name = name
         self.driver = driver
@@ -51,7 +52,6 @@ class Network(object):
         self.internal = internal
         self.labels = labels or {}
         self.enable_ipv6 = enable_ipv6
-        self.stack_name = stack_name
 
     def __repr__(self):
         return "<Network: {}>".format(self.name)
@@ -83,7 +83,6 @@ def load_networks(stack_name: str,
         network = Network(
             name=stack_name + "_" + network_name,
             client=cli,
-            stack_name=stack_name,
             **network_configuration_dict
         )
         networks.append(network)

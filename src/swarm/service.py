@@ -58,7 +58,6 @@ class Service(object):
             resources=None,
             restart_policy=None,
             secrets=None,
-            stack_name=None,
             stop_grace_period=None,
             update_config=None,
             user=None,
@@ -77,7 +76,6 @@ class Service(object):
         self.mode = mode
         self.name = name
         self.networks = networks
-        self.stack_name = stack_name
         self.options = options
 
     def __repr__(self):
@@ -107,7 +105,6 @@ def load_services(stack_name: str,
         service = Service(
             name=stack_name + "_" + service_name,
             client=cli,
-            stack_name=stack_name,
             **service_configuration_dict
         )
         services.append(service)

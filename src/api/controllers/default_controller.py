@@ -20,9 +20,11 @@ import docker.errors as docker_errs
 from jinja2 import Template
 
 from requests.exceptions import ConnectionError
-from src.swarm.stack import (create_stack, get_stack_health, remove_stack)
-from typing import Dict, Tuple
+from typing import (Dict, Tuple)
 from yaml import safe_load
+
+from src.swarm.stack import (create_stack, get_stack_health, remove_stack)
+from src.swarm.exceptions import StackNameAlreadyInUse
 
 
 def get_engine_status(engine) -> Tuple[Dict, int]:
@@ -30,9 +32,11 @@ def get_engine_status(engine) -> Tuple[Dict, int]:
     try:
         cli.ping()
     except docker_errs.APIError:
-        return {"status": 400, "message": "Docker API Error"}, 400
+        return response(400, "Docker API Error")
     except ConnectionError:
-        return {"status": 400, "message": "Server not responding"}, 400
+        return response(400, "Connection error, "
+                             "please check if the engine-url is set "
+                             "correctly and is reachable")
     return {"status": 200, "message": "Docker engine reachable"}, 200
 
 
@@ -42,10 +46,12 @@ def delete_stack(name, stack_parameters) -> Tuple[Dict, int]:
     try:
         remove_stack(name, cli)
     except docker_errs.APIError:
-        return {"status": 400, "message": "Docker API Error"}, 400
+        return response(400, "Docker API Error")
     except ConnectionError:
-        return {"status": 400, "message": "Server not responding"}, 400
-    return {"status": 204, "message": "Stack {0} deleted".format(name)}, 204
+        return response(400, "Connection error, "
+                             "please check if the engine-url is set "
+                             "correctly and is reachable")
+    return response(204, "Stack {0} deleted".format(name))
 
 
 def deploy_stack(stack) -> Tuple[Dict, int]:
@@ -54,18 +60,21 @@ def deploy_stack(stack) -> Tuple[Dict, int]:
     compose = parse_compose_file(stack['compose-file'], stack['compose-vars'])
 
     try:
-        create_stack(stack_name, compose, cli)
-    except ConnectionError as err:
-        return {"status": 400, "message": "Connection error, "
-                "please check if the engine-url is set "
-                "correctly and is reachable"}, 400
-    return {"status": 201, "message": "Stack successfully deployed!"}, 201
+        service_list = create_stack(stack_name, compose, cli)
+    except ConnectionError:
+        return response(400, "Connection error, "
+                             "please check if the engine-url is set "
+                             "correctly and is reachable")
+    except StackNameAlreadyInUse:
+        return response(400, "Stack name already in use")
+    return response(201, "Stack successfully deployed!",
+                    {"services": [service.name for service in service_list]})
 
 
-def get_stack_status(name, stack_parameters) -> str:
+def get_stack_status(name, stack_parameters) -> Tuple[Dict, int]:
     cli = get_client(stack_parameters)
     status = get_stack_health(name, cli)
-    return str(status)
+    return {"status": 200, "message": "OK", "stack_status": status}, 200
 
 
 def update_stack(stack) -> str:
@@ -87,3 +96,7 @@ def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
         compose_yaml = safe_load(compose)
 
     return safe_load(compose_yaml)
+
+
+def response(status_code: int, message: str, *args) -> Tuple(Dict, int):
+    return dict(status=status_code, message=message, *args), status_code
