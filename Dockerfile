@@ -9,4 +9,6 @@ RUN apk add --update git python3 && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 
-ENTRYPOINT python3 /home/MasterMind-ServiceManager/src/api/app.py
+WORKDIR /home/MasterMind-ServiceManager/src/
+
+ENTRYPOINT python3 -m api

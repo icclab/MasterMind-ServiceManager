@@ -51,7 +51,7 @@ paths:
           description: "OK"
       x-tags:
       - tag: "Stack"
-      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
+      x-swagger-router-controller: "api.controllers.stack_controller"
   /stack/{name}:
     post:
       tags:
@@ -94,7 +94,7 @@ paths:
           description: "OK"
       x-tags:
       - tag: "Stack"
-      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
+      x-swagger-router-controller: "api.controllers.stack_controller"
     delete:
       tags:
       - "Stack"
@@ -136,5 +136,5 @@ paths:
           description: "OK"
       x-tags:
       - tag: "Stack"
-      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
+      x-swagger-router-controller: "api.controllers.stack_controller"
 definitions: {}
