@@ -16,59 +16,60 @@
 # AUTHOR: Bruno Grazioli
 
 from __future__ import absolute_import
-from typing import (List, Dict, Union)
+from typing import List, Dict, Union
 
 from docker import DockerClient
-from docker.models import (services, networks)
+from docker.models import services, networks
 
-from .exceptions import StackNameExists
-from .network import (Network, load_networks)
-from .service import (Service, load_services)
-from .volume import (Volume, load_volumes)
+from .exceptions import StackNameExists, StackNotFound
+from .network import Network, load_networks
+from .service import Service, load_services
+from .volume import Volume, load_volumes
 
 
-def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
+def create(obj_list: List[Union[Volume, Network, Service]],
+           client: DockerClient) -> None:
     for obj in obj_list:
-        obj.create()
+        obj.create(client)
 
 
 def create_stack(stack_name: str,
                  compose_file: Dict,
-                 cli: DockerClient) -> List[Service]:
+                 client: DockerClient) -> List[Service]:
 
     service_list = list()
 
     # Check if stack_name is already in use
-    if get_stack_services(stack_name, cli):
-        raise StackNameExists
+    if get_stack_services(stack_name, client):
+        raise StackNameExists("Stack name already in use.")
 
     if compose_file.get("networks"):
         network_list = load_networks(
             stack_name,
-            compose_file.get("networks"),
-            cli
+            compose_file.get("networks")
         )
-        create(network_list)
+        create(network_list, client)
 
     if compose_file.get("volumes"):
         volume_list = load_volumes(
             stack_name,
-            compose_file.get('volumes'),
-            cli
+            compose_file.get('volumes')
         )
-        create(volume_list)
+        create(volume_list, client)
 
     if compose_file.get("services"):
         service_list = load_services(
             stack_name,
-            compose_file.get("services"),
-            cli
+            compose_file.get("services")
         )
-        create(service_list)
+        create(service_list, client)
     return service_list
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:
+    if not get_stack_services(stack_name, client):
+        raise StackNotFound("Stack not found.")
+
     service_list = get_stack_services(stack_name, client)
     for service in service_list:
         service.remove()
@@ -78,8 +79,11 @@ def remove_stack(stack_name: str, client: DockerClient) -> None:
         network.remove()
 
 
-def get_stack_health(name: str, client: DockerClient) -> List[Dict]:
-    service_list = get_stack_services(name, client)
+def get_stack_health(stack_name: str, client: DockerClient) -> List[Dict]:
+    if not get_stack_services(stack_name, client):
+        raise StackNotFound("Stack not found.")
+
+    service_list = get_stack_services(stack_name, client)
 
     stack_status = list()
     for service in service_list:

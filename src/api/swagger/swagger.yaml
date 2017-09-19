@@ -9,86 +9,58 @@ info:
   license:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "127.0.0.1"
+host: "127.0.0.1:8080"
 basePath: "/v1"
 schemes:
 - "http"
 paths:
-  /engine/status:
-    get:
-      tags:
-      - "Engine"
-      summary: "Docker Engine healthcheck"
-      description: ""
-      operationId: "controllers.default_controller.get_engine_status"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      parameters:
-      - in: "body"
-        name: "engine"
-        description: ""
-        required: true
-        schema:
-          $ref: "#/definitions/Engine"
-      responses:
-        200:
-          description: "OK"
-      x-tags:
-      - tag: "Engine"
   /stack:
     post:
       tags:
       - "Stack"
       summary: "Deploy a new stack"
       description: ""
-      operationId: "controllers.default_controller.deploy_stack"
+      operationId: "deploy_stack"
       consumes:
-      - "application/json"
+      - "multipart/form-data"
       produces:
       - "application/json"
       parameters:
-      - in: "body"
-        name: "stack"
-        description: "Create a Stack"
+      - name: "stack_data"
+        in: "formData"
+        description: "Stack Information"
         required: true
-        schema:
-          $ref: "#/definitions/Stack"
+        type: "string"
+      - name: "ca_cert"
+        in: "formData"
+        description: "ca-cert"
+        required: false
+        type: "file"
+      - name: "cert"
+        in: "formData"
+        description: "cert"
+        required: false
+        type: "file"
+      - name: "cert_key"
+        in: "formData"
+        description: "cert-key"
+        required: false
+        type: "file"
       responses:
         200:
           description: "OK"
       x-tags:
       - tag: "Stack"
-    put:
-      tags:
-      - "Stack"
-      summary: "Update an existing stack"
-      description: ""
-      operationId: "controllers.default_controller.update_stack"
-      consumes:
-      - "application/json"
-      produces:
-      - "application/json"
-      parameters:
-      - in: "body"
-        name: "stack"
-        description: ""
-        required: true
-        schema:
-          $ref: "#/definitions/Stack"
-      responses:
-        200:
-          description: "OK"
-      x-tags:
-      - tag: "Stack"
+      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
   /stack/{name}:
-    get:
+    post:
       tags:
       - "Stack"
-      summary: "Get the list of services of a stack"
-      description: "Get a list of all services of a stack"
-      operationId: "controllers.default_controller.get_stack_status"
+      summary: "Get existing stack"
+      description: ""
+      operationId: "get_stack"
+      consumes:
+      - "multipart/form-data"
       produces:
       - "application/json"
       parameters:
@@ -97,23 +69,40 @@ paths:
         description: ""
         required: true
         type: "string"
-      - in: "body"
-        name: "stack_parameters"
-        description: ""
+      - name: "stack_data"
+        in: "formData"
+        description: "Docker engine url"
         required: true
-        schema:
-          $ref: "#/definitions/Engine"
+        type: "string"
+      - name: "ca_cert"
+        in: "formData"
+        description: "ca-cert"
+        required: false
+        type: "file"
+      - name: "cert"
+        in: "formData"
+        description: "cert"
+        required: false
+        type: "file"
+      - name: "cert_key"
+        in: "formData"
+        description: "cert-key"
+        required: false
+        type: "file"
       responses:
         200:
-          description: "Successfully retrieved services"
+          description: "OK"
       x-tags:
       - tag: "Stack"
+      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
     delete:
       tags:
       - "Stack"
-      summary: "Delete services and networks of a stack"
-      description: "Delete services and networks of a stack"
-      operationId: "controllers.default_controller.delete_stack"
+      summary: "Delete an existing stack"
+      description: ""
+      operationId: "delete_stack"
+      consumes:
+      - "multipart/form-data"
       produces:
       - "application/json"
       parameters:
@@ -122,36 +111,30 @@ paths:
         description: ""
         required: true
         type: "string"
-      - in: "body"
-        name: "stack_parameters"
-        description: ""
+      - name: "stack_data"
+        in: "formData"
+        description: "Docker engine url"
         required: true
-        schema:
-          $ref: "#/definitions/Engine"
+        type: "string"
+      - name: "ca_cert"
+        in: "formData"
+        description: "ca-cert"
+        required: false
+        type: "file"
+      - name: "cert"
+        in: "formData"
+        description: "cert"
+        required: false
+        type: "file"
+      - name: "cert_key"
+        in: "formData"
+        description: "cert-key"
+        required: false
+        type: "file"
       responses:
         200:
-          description: "Successfully deleted services"
+          description: "OK"
       x-tags:
       - tag: "Stack"
-definitions:
-  Engine:
-    type: "object"
-    required:
-    - "engine-url"
-    properties:
-      engine-url:
-        type: "string"
-  Stack:
-    type: "object"
-    required:
-    - "engine-url"
-    - "name"
-    properties:
-      name:
-        type: "string"
-      compose-file:
-        type: "string"
-      engine-url:
-        type: "string"
-      compose-vars:
-        type: "string"
+      x-swagger-router-controller: "swagger_server.controllers.stack_controller"
+definitions: {}

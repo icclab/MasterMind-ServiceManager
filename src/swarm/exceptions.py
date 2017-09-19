@@ -16,17 +16,29 @@
 # AUTHOR: Bruno Grazioli
 
 
-class StackNameExists(Exception):
+class StackError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
+class StackNameExists(StackError):
     pass
 
 
-class NetworkNotFound(Exception):
+class StackNotFound(StackError):
     pass
 
 
-class VolumeNotFound(Exception):
+class NetworkNotFound(StackError):
     pass
 
 
-class InvalidYAMLFile(Exception):
+class VolumeNotFound(StackError):
+    pass
+
+
+class InvalidYAMLFile(StackError):
     pass

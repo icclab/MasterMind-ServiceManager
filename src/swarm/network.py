@@ -34,7 +34,6 @@ class Network(object):
     def __init__(
             self,
             name,
-            client=None,
             driver=None,
             external=False,
             options=None,
@@ -44,7 +43,6 @@ class Network(object):
             labels=None,
             enable_ipv6=False,
     ):
-        self.client = client
         self.name = name
         self.driver = driver
         self.external = external
@@ -58,25 +56,24 @@ class Network(object):
     def __repr__(self):
         return "<Network: {}>".format(self.name)
 
-    def create(self):
+    def create(self, client: DockerClient):
         if self.external:
-            self.check_external_network()
-        self.client.networks.create(name=self.name,
-                                    driver=self.driver,
-                                    options=self.options,
-                                    ipam=self.ipam,
-                                    check_duplicate=self.check_duplicate,
-                                    internal=self.internal,
-                                    labels=self.labels)
+            self.check_external_network(client)
+        client.networks.create(name=self.name,
+                               driver=self.driver,
+                               options=self.options,
+                               ipam=self.ipam,
+                               check_duplicate=self.check_duplicate,
+                               internal=self.internal,
+                               labels=self.labels)
 
-    def check_external_network(self):
-        if not self.client.networks.list(names=self.name):
-            raise NetworkNotFound
+    def check_external_network(self, client: DockerClient):
+        if not client.networks.list(names=self.name):
+            raise NetworkNotFound("External network not found.")
 
 
 def load_networks(stack_name: str,
-                  network_dict: Dict,
-                  cli: DockerClient) -> List[Network]:
+                  network_dict: Dict) -> List[Network]:
 
     networks = list()
     for network_name, network_attr in network_dict.items():
@@ -84,7 +81,6 @@ def load_networks(stack_name: str,
                                                                network_attr)
         network = Network(
             name=stack_name + "_" + network_name,
-            client=cli,
             **network_configuration_dict
         )
         networks.append(network)

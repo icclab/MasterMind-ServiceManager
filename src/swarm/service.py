@@ -15,7 +15,7 @@
 #
 # AUTHOR: Bruno Grazioli
 
-import docker
+from docker import DockerClient
 from docker.types.services import ServiceMode, EndpointSpec
 from typing import (List, Dict)
 
@@ -45,7 +45,6 @@ class Service(object):
             args=None,
             constraints=None,
             container_labels=None,
-            client=None,
             endpoint_spec=None,
             environment=None,
             hostname=None,
@@ -66,7 +65,6 @@ class Service(object):
     ):
         self.args = args
         self.container_labels = container_labels
-        self.client = client
         self.entrypoint = command
         self.endpoint_spec = None
         self.environment = environment
@@ -81,22 +79,21 @@ class Service(object):
     def __repr__(self):
         return "<Service: {}>".format(self.name)
 
-    def create(self):
-        self.client.services.create(self.image,
-                                    args=self.args,
-                                    command=self.entrypoint,
-                                    container_labels=self.container_labels,
-                                    env=self.environment,
-                                    endpoint_spec=self.endpoint_spec,
-                                    labels=self.labels,
-                                    mode=self.mode,
-                                    name=self.name,
-                                    networks=self.networks)
+    def create(self, client: DockerClient):
+        client.services.create(self.image,
+                               args=self.args,
+                               command=self.entrypoint,
+                               container_labels=self.container_labels,
+                               env=self.environment,
+                               endpoint_spec=self.endpoint_spec,
+                               labels=self.labels,
+                               mode=self.mode,
+                               name=self.name,
+                               networks=self.networks)
 
 
 def load_services(stack_name: str,
-                  services_dict: Dict,
-                  cli: docker.DockerClient) -> List[Service]:
+                  services_dict: Dict) -> List[Service]:
 
     services = list()
     for service_name, service_attr in services_dict.items():
@@ -104,7 +101,6 @@ def load_services(stack_name: str,
                                                                service_attr)
         service = Service(
             name=stack_name + "_" + service_name,
-            client=cli,
             **service_configuration_dict
         )
         services.append(service)

@@ -18,6 +18,8 @@
 from docker import DockerClient
 from typing import (List, Dict)
 
+from.exceptions import VolumeNotFound
+
 VOLUME_KEYS = [
     "driver",
     "driver_opts",
@@ -30,30 +32,35 @@ class Volume(object):
     def __init__(
             self,
             name,
-            client=None,
             driver=None,
             driver_opts=None,
-            labels=None
+            external=False,
+            labels=None,
     ):
-        self.client = client
         self.name = name
         self.driver = driver
         self.driver_opts = driver_opts
+        self.external = external
         self.labels = labels or {}
 
     def __repr__(self):
-        return "<Network: {}>".format(self.name)
+        return "<Volume: {}>".format(self.name)
 
-    def create(self):
-        self.client.volumes.create(name=self.name,
-                                   driver=self.driver,
-                                   driver_opts=self.driver_opts,
-                                   labels=self.labels)
+    def create(self, client: DockerClient) -> None:
+        if self.external:
+            self.check_external_network(client)
+        client.volumes.create(name=self.name,
+                              driver=self.driver,
+                              driver_opts=self.driver_opts,
+                              labels=self.labels)
+
+    def check_external_network(self, client: DockerClient):
+        if not client.volume.list(names=self.name):
+            raise VolumeNotFound("External network not found.")
 
 
 def load_volumes(stack_name: str,
-                 volume_dict: Dict,
-                 cli: DockerClient) -> List[Volume]:
+                 volume_dict: Dict) -> List[Volume]:
 
     volumes = list()
     for volume_name, volume_attr in volume_dict.items():
@@ -61,7 +68,6 @@ def load_volumes(stack_name: str,
                                                              volume_attr)
         volume = Volume(
             name=stack_name + "_" + volume_name,
-            client=cli,
             **volume_configuration_dict
         )
         volumes.append(volume)
