@@ -2,7 +2,7 @@
 swagger: "2.0"
 info:
   description: ""
-  version: "0.1.0"
+  version: "1.0.0"
   title: "MasterMind Service Manager"
   contact:
     email: "gaea@zhaw.ch"
@@ -22,30 +22,16 @@ paths:
       description: ""
       operationId: "deploy_stack"
       consumes:
-      - "multipart/form-data"
+      - "application/json"
       produces:
       - "application/json"
       parameters:
-      - name: "stack_data"
-        in: "formData"
-        description: "Stack Information"
+      - in: "body"
+        name: "stack"
+        description: "Create a Stack"
         required: true
-        type: "string"
-      - name: "ca_cert"
-        in: "formData"
-        description: "ca-cert"
-        required: false
-        type: "file"
-      - name: "cert"
-        in: "formData"
-        description: "cert"
-        required: false
-        type: "file"
-      - name: "cert_key"
-        in: "formData"
-        description: "cert-key"
-        required: false
-        type: "file"
+        schema:
+          $ref: "#/definitions/Stack"
       responses:
         200:
           description: "OK"
@@ -53,14 +39,12 @@ paths:
       - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
   /stack/{name}:
-    post:
+    get:
       tags:
       - "Stack"
-      summary: "Get existing stack"
-      description: ""
+      summary: "Get the list of services of a stack"
+      description: "Get a list of all services of a stack"
       operationId: "get_stack"
-      consumes:
-      - "multipart/form-data"
       produces:
       - "application/json"
       parameters:
@@ -69,40 +53,24 @@ paths:
         description: ""
         required: true
         type: "string"
-      - name: "stack_data"
-        in: "formData"
-        description: "Docker engine url"
+      - in: "body"
+        name: "getStack"
+        description: ""
         required: true
-        type: "string"
-      - name: "ca_cert"
-        in: "formData"
-        description: "ca-cert"
-        required: false
-        type: "file"
-      - name: "cert"
-        in: "formData"
-        description: "cert"
-        required: false
-        type: "file"
-      - name: "cert_key"
-        in: "formData"
-        description: "cert-key"
-        required: false
-        type: "file"
+        schema:
+          $ref: "#/definitions/Stack"
       responses:
         200:
-          description: "OK"
+          description: "Successfully retrieved services"
       x-tags:
       - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
     delete:
       tags:
       - "Stack"
-      summary: "Delete an existing stack"
-      description: ""
+      summary: "Delete services of a stack"
+      description: "Delete services of a stack"
       operationId: "delete_stack"
-      consumes:
-      - "multipart/form-data"
       produces:
       - "application/json"
       parameters:
@@ -111,30 +79,36 @@ paths:
         description: ""
         required: true
         type: "string"
-      - name: "stack_data"
-        in: "formData"
-        description: "Docker engine url"
+      - in: "body"
+        name: "deleteStack"
+        description: ""
         required: true
-        type: "string"
-      - name: "ca_cert"
-        in: "formData"
-        description: "ca-cert"
-        required: false
-        type: "file"
-      - name: "cert"
-        in: "formData"
-        description: "cert"
-        required: false
-        type: "file"
-      - name: "cert_key"
-        in: "formData"
-        description: "cert-key"
-        required: false
-        type: "file"
+        schema:
+          $ref: "#/definitions/Stack"
       responses:
         200:
-          description: "OK"
+          description: "Successfully deleted services"
       x-tags:
       - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
-definitions: {}
+definitions:
+  Stack:
+    type: "object"
+    required:
+    - "engine-url"
+    - "name"
+    properties:
+      name:
+        type: "string"
+      compose-file:
+        type: "string"
+      compose-vars:
+        type: "string"
+      engine-url:
+        type: "string"
+      ca-cert:
+        type: "string"
+      cert:
+        type: "string"
+      cert-key:
+        type: "string"
