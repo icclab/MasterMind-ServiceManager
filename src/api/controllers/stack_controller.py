@@ -188,7 +188,7 @@ def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
             compose_vars_yaml = safe_load(compose_vars)
             compose_yaml = compose_template.render(compose_vars_yaml)
         else:
-            compose_yaml = safe_load(compose)
+            compose_yaml = compose
 
         return safe_load(compose_yaml)
     except scanner.ScannerError:
