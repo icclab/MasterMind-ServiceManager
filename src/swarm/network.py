@@ -57,8 +57,6 @@ class Network(object):
         return "<Network: {}>".format(self.name)
 
     def create(self, client: DockerClient):
-        if self.external:
-            self.check_external_network(client)
         client.networks.create(name=self.name,
                                driver=self.driver,
                                options=self.options,
@@ -67,20 +65,22 @@ class Network(object):
                                internal=self.internal,
                                labels=self.labels)
 
-    def check_external_network(self, client: DockerClient):
-        if not client.networks.list(names=self.name):
-            raise NetworkNotFound("External network not found.")
-
 
 def load_networks(stack_name: str,
-                  network_dict: Dict) -> List[Network]:
+                  network_dict: Dict,
+                  client: DockerClient) -> List[Network]:
 
     networks = list()
     for network_name, network_attr in network_dict.items():
         network_configuration_dict = get_network_configuration(stack_name,
                                                                network_attr)
+        if 'external' in network_configuration_dict.keys():
+            check_external_network(network_name, client)
+            break
+        else:
+            new_network_name = stack_name + "_" + network_name
         network = Network(
-            name=stack_name + "_" + network_name,
+            name=new_network_name,
             **network_configuration_dict
         )
         networks.append(network)
@@ -99,3 +99,8 @@ def get_network_configuration(stack_name: str,
     # if hasattr(config_dict, "external"):
         # check_external_network()
     return network_attr_dict
+
+
+def check_external_network(name: str, client: DockerClient):
+    if not client.networks.list(names=name):
+        raise NetworkNotFound("External network not found.")

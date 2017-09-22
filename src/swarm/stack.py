@@ -46,7 +46,8 @@ def create_stack(stack_name: str,
     if compose_file.get("networks"):
         network_list = load_networks(
             stack_name,
-            compose_file.get("networks")
+            compose_file.get("networks"),
+            client
         )
         create(network_list, client)
 

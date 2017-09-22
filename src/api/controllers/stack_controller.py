@@ -183,8 +183,8 @@ def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
     try:
         if compose_vars:
             compose_template = Template(compose,
-                                        variable_start_string='{{',
-                                        variable_end_string='}}')
+                                        variable_start_string='${',
+                                        variable_end_string='}')
             compose_vars_yaml = safe_load(compose_vars)
             compose_yaml = compose_template.render(compose_vars_yaml)
         else:
