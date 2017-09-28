@@ -15,6 +15,7 @@
 #
 # AUTHOR: Bruno Grazioli
 
+import connexion
 import docker
 import docker.tls
 import os
@@ -25,54 +26,49 @@ from requests.exceptions import ConnectionError
 from typing import Dict, Tuple
 from yaml import safe_load, scanner
 
+from api.models.stack import Stack
 from swarm.stack import create_stack, get_stack_health, remove_stack
 from swarm.exceptions import NetworkNotFound, StackNameExists, VolumeNotFound,\
-    InvalidYAMLFile, StackNotFound, StackError
+    InvalidYAMLFile, StackNotFound
 
 
-def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
+def get_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
 
     temp_files = dict()
-    try:
-        validate_stack_data_parameters(stack)
+    stack = Stack.from_dict(connexion.request.get_json())
 
-        temp_files = create_temp_files(stack.get("ca-cert"),
-                                       stack.get("cert"),
-                                       stack.get("cert-key"))
+    try:
+        temp_files = create_temp_files(stack.ca_cert,
+                                       stack.cert,
+                                       stack.cert_key)
         cli = get_client(stack, tls=temp_files)
 
-        remove_stack(name, cli)
+        stack_status = get_stack_health(name, cli)
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
     except StackNotFound as err:
         return response(404, err.msg)
-    except StackDataKeyError as err:
-        return response(400, err.msg)
-    except StackDataAttributeError as err:
-        return response(400, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)
-    return response(200, "Stack {0} deleted.".format(name))
+    return response(200, "", {"stack_status": str(stack_status)})
 
 
 def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
 
     temp_files = dict()
+    stack = Stack.from_dict(connexion.request.get_json())
     try:
-        validate_stack_data_parameters(stack)
 
-        stack_name = stack['name']
-
-        temp_files = create_temp_files(stack.get("ca-cert"),
-                                       stack.get("cert"),
-                                       stack.get("cert-key"))
+        temp_files = create_temp_files(stack.ca_cert,
+                                       stack.cert,
+                                       stack.cert_key)
         cli = get_client(stack, tls=temp_files)
 
-        compose = parse_compose_file(stack['compose-file'],
-                                     stack['compose-vars'])
-        service_list = create_stack(stack_name, compose, cli)
+        compose = parse_compose_file(stack.compose_file,
+                                     stack.compose_vars)
+        service_list = create_stack(stack.name, compose, cli)
 
     except InvalidYAMLFile:
         return response(400, "Invalid yaml file.")
@@ -85,10 +81,6 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
         return response(400, err.msg)
     except VolumeNotFound as err:
         return response(400, err.msg)
-    except StackDataKeyError as err:
-        return response(400, err.msg)
-    except StackDataAttributeError as err:
-        return response(400, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)
@@ -96,35 +88,29 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
                     {"services": [service.name for service in service_list]})
 
 
-def get_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
+def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
 
     temp_files = dict()
+    stack = Stack.from_dict(connexion.request.get_json())
     try:
-        validate_stack_data_parameters(stack)
-
-        temp_files = create_temp_files(stack.get("ca-cert"),
-                                       stack.get("cert"),
-                                       stack.get("cert-key"))
+        temp_files = create_temp_files(stack.ca_cert,
+                                       stack.cert,
+                                       stack.cert_key)
         cli = get_client(stack, tls=temp_files)
 
-        stack_status = get_stack_health(name, cli)
+        remove_stack(name, cli)
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
     except StackNotFound as err:
-        print(err.args)
         return response(404, err.msg)
-    except StackDataKeyError as err:
-        return response(400, err.msg)
-    except StackDataAttributeError as err:
-        return response(400, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)
-    return response(200, "", {"stack_status": str(stack_status)})
+    return response(200, "Stack {0} deleted.".format(name))
 
 
-def get_client(client: Dict, tls: Dict=None):
+def get_client(client: Stack, tls: Dict=None):
     tls_config = False
     if tls:
         tls_config = docker.tls.TLSConfig(
@@ -135,7 +121,7 @@ def get_client(client: Dict, tls: Dict=None):
             ),
             verify=tls['ca_cert'].name
         )
-    return docker.DockerClient(base_url=client['engine-url'],
+    return docker.DockerClient(base_url=client.engine_url,
                                version="1.26",
                                tls=tls_config)
 
@@ -146,22 +132,16 @@ def create_temp_files(ca_cert: str=None,
 
     if ca_cert and cert and key:
         directory_name = tempfile.mkdtemp()
-        ca_cert_temp = tempfile.NamedTemporaryFile(mode='w+t',
-                                                   dir=directory_name,
-                                                   delete=False)
 
+        ca_cert_temp = create_temporary_file(directory_name)
         ca_cert_temp.write(ca_cert)
         ca_cert_temp.close()
 
-        cert_temp = tempfile.NamedTemporaryFile(mode='w+t',
-                                                dir=directory_name,
-                                                delete=False)
+        cert_temp = create_temporary_file(directory_name)
         cert_temp.write(cert)
         cert_temp.close()
 
-        key_temp = tempfile.NamedTemporaryFile(mode='w+t',
-                                               dir=directory_name,
-                                               delete=False)
+        key_temp = create_temporary_file(directory_name)
         key_temp.write(key)
         key_temp.close()
 
@@ -170,6 +150,12 @@ def create_temp_files(ca_cert: str=None,
                     cert=cert_temp,
                     key=key_temp)
     return {}
+
+
+def create_temporary_file(directory: str=None) -> tempfile.NamedTemporaryFile:
+    return tempfile.NamedTemporaryFile(mode='w+t',
+                                       dir=directory,
+                                       delete=False)
 
 
 def close_temp_files(temp_files: Dict) -> None:
@@ -197,28 +183,3 @@ def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
 
 def response(status_code: int, message: str, *args) -> Tuple[Dict, int]:
     return dict(status=status_code, message=message, *args), status_code
-
-
-def validate_stack_data_parameters(stack_data: Dict) -> None:
-    stack_valid_keys = ["engine-url", "compose-file", "compose-vars",
-                        "name", "cert", "ca-cert", "cert-key"]
-    if stack_valid_keys[0] not in stack_data.keys():
-        raise StackDataKeyError('engine-url parameter is missing.')
-
-    for key, value in stack_data.items():
-        if key in stack_valid_keys:
-            if not isinstance(value, str):
-                raise StackDataAttributeError(
-                    '{0} attribute error.'.format(key))
-        else:
-            raise StackDataKeyError(
-                '{0} parameter is not supported.'.format(key)
-            )
-
-
-class StackDataKeyError(StackError):
-    pass
-
-
-class StackDataAttributeError(StackError):
-    pass

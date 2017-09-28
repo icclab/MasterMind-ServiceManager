@@ -15,171 +15,197 @@
 #
 # AUTHOR: Bruno Grazioli
 
-from docker import DockerClient
-from docker.types.services import ServiceMode, EndpointSpec
+import enum
+
+from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
+    UpdateConfig  # Resources
 from typing import (List, Dict)
 
 
-SERVICE_KEYS = [
-    "args",
-    "constraints",
-    "container_labels",
-    "environment",
-    "entrypoint",
-    "hostname",
-    "image",
-    "log_driver",
-    "log_driver_options",
-    "stop_grace_period",
-    "user",
-    "workdir"
+UPDATE_CONFIG_KEYS = [
+    'parallelism',
+    'delay',
+    'failure_action',
+    'monitor',
+    'max_failure_ratio'
 ]
+
+RESTART_POLICY_KEYS = [
+    'condition',
+    'delay',
+    'max_attempts',
+    'window'
+]
+
+
+@enum.unique
+class Modes(enum.Enum):
+    """Enumeration for the types of service modes known to compose."""
+    GLOBAL = "global"
+    REPLICATED = "replicated"
 
 
 class Service(object):
     def __init__(
             self,
             name,
+            client,
             image=None,
-            command=None,
             args=None,
-            constraints=None,
-            container_labels=None,
-            endpoint_spec=None,
+            entrypoint=None,
             environment=None,
             hostname=None,
             labels=None,
-            log_driver=None,
-            log_driver_options=None,
-            mode=None,
-            mounts=None,
+            logging=None,
+            volumes=None,
             networks=None,
-            resources=None,
-            restart_policy=None,
-            secrets=None,
+            deploy=None,
+            ports=None,
+            stack_name=None,
             stop_grace_period=None,
-            update_config=None,
             user=None,
-            workdir=None,
-            **options
+            workdir=None
     ):
         self.args = args
-        self.container_labels = container_labels
-        self.entrypoint = command
-        self.endpoint_spec = None
+        self.client = client
+        self.deploy = deploy
+        self.entrypoint = entrypoint
         self.environment = environment
         self.hostname = hostname
+        self.logging = logging
         self.image = image
-        self.labels = labels or {}
-        self.mode = mode
         self.name = name
         self.networks = networks
-        self.options = options
+        self.ports = ports
+        self.stack_name = stack_name
+        self.stop_grace_period = stop_grace_period
+        self.user = user
+        self.volumes = volumes
+        self.workdir = workdir
+
+        self.container_labels = None
+        self.endpoint_spec = None
+        self.service_labels = dict()
+        self.log_driver = None
+        self.log_driver_options = None
+        self.mode = None
+        self.restart_policy = None
+        self.update_config = None
+        self._initialize_service()
+        self._service_container_labels(labels) if labels else None
 
     def __repr__(self):
         return "<Service: {}>".format(self.name)
 
-    def create(self, client: DockerClient):
-        client.services.create(self.image,
-                               args=self.args,
-                               command=self.entrypoint,
-                               container_labels=self.container_labels,
-                               env=self.environment,
-                               endpoint_spec=self.endpoint_spec,
-                               labels=self.labels,
-                               mode=self.mode,
-                               name=self.name,
-                               networks=self.networks)
+    def create(self):
+        self.client.services.create(self.image,
+                                    command=self.entrypoint,
+                                    args=self.args,
+                                    # constraints=self.constraints,
+                                    container_labels=self.container_labels,
+                                    endpoint_spec=self.endpoint_spec,
+                                    env=self.environment,
+                                    hostname=self.hostname,
+                                    labels=self.service_labels,
+                                    log_driver=self.log_driver,
+                                    log_driver_options=self.log_driver_options,
+                                    mode=self.mode,
+                                    name=self.name,
+                                    networks=self.networks,
+                                    restart_policy=self.restart_policy,
+                                    stop_grace_period=self.stop_grace_period,
+                                    update_config=self.update_config,
+                                    user=self.user,
+                                    workdir=self.workdir)
+
+    def _initialize_service(self):
+
+        self._check_network_names()
+        if self.ports:
+            self._service_endpoint_specs(self.ports)
+
+        if self.stack_name:
+            self.service_labels.update(
+                {'com.docker.stack.namespace': self.stack_name}
+            )
+
+        self.name = self.stack_name + "_" + self.name if self.stack_name \
+            else self.name
+
+        if self.deploy and self.deploy.get('labels'):
+            self._service_labels(
+                self.deploy.get('labels')
+            )
+
+        if self.deploy and self.deploy.get('restart_policy'):
+            self._service_restart_policy(
+                self.deploy.get('restart_policy')
+            )
+
+        if self.deploy and self.deploy.get('update_config'):
+            self._service_update_config(
+                self.deploy.get('update_config')
+            )
+
+        if self.deploy and \
+                (self.deploy.get('mode') or self.deploy.get('replicas')):
+            self._service_mode(
+                self.deploy
+            )
+
+    def _check_network_names(self):
+        prefix = self.stack_name + "_"
+        self.networks = [
+            prefix + network if prefix + network in list(
+                map(
+                    lambda netw: netw.name,
+                    self.client.networks.list(names=[self.stack_name])
+                )
+            )
+            else network for network in self.networks
+        ]
+
+    def _service_endpoint_specs(self, ports: List[str]) -> None:
+        ports_dict = dict()
+        for p in ports:
+            p_str = p.split(":")
+            ports_dict[int(p_str[0])] = int(p_str[1])
+        self.endpoint_spec = EndpointSpec(ports=ports_dict)
+
+    def _service_mode(self, mode: Dict) -> None:
+        svc_mode = mode.get('mode') or Modes.REPLICATED
+        svc_replicas = mode.get('replicas') or 1 \
+            if svc_mode != Modes.GLOBAL else None
+        self.mode = ServiceMode(mode=svc_mode, replicas=svc_replicas)
+
+    def _service_update_config(self, update_config_dict: Dict) -> None:
+        check_dict_keys(update_config_dict, UPDATE_CONFIG_KEYS)
+        self.update_config = UpdateConfig(**update_config_dict)
+
+    def _service_restart_policy(self, restart_policy_dict: Dict) -> None:
+        check_dict_keys(restart_policy_dict, RESTART_POLICY_KEYS)
+        self.restart_policy = RestartPolicy(**restart_policy_dict)
+
+    def _service_container_labels(self, labels) -> None:
+        if isinstance(labels, dict):
+            self.container_labels = labels
+        elif isinstance(labels, list):
+            label_dict = dict()
+            for label in labels:
+                try:
+                    label_key, label_value = label.split("=")
+                    label_dict[label_key] = label_value
+                # ValueError raised for labels without value
+                except ValueError:
+                    label_dict[label] = ""
+            self.container_labels = label_dict
+
+    def _service_labels(self, labels):
+        self.service_labels.update(labels)
+
+    def _service_logs(self, logging: Dict):
+        pass
 
 
-def load_services(stack_name: str,
-                  services_dict: Dict) -> List[Service]:
-
-    services = list()
-    for service_name, service_attr in services_dict.items():
-        service_configuration_dict = get_service_configuration(stack_name,
-                                                               service_attr)
-        service = Service(
-            name=stack_name + "_" + service_name,
-            **service_configuration_dict
-        )
-        services.append(service)
-    return services
-
-
-def get_service_configuration(stack_name: str,
-                              config_dict: Dict) -> Dict:
-
-    services_attr_dict = dict()
-    for key in SERVICE_KEYS:
-        if key in config_dict:
-            services_attr_dict[key] = config_dict[key]
-
-    # Attributes that need special handling
-    if "ports"in config_dict:
-        services_attr_dict["endpoint_spec"] = get_service_endpoint_spec(
-            config_dict["ports"])
-
-    services_attr_dict["labels"] = {}
-
-    # Associating the service to the stack
-    services_attr_dict["labels"]["com.docker.stack.namespace"] = stack_name
-
-    if "deploy" in config_dict:
-        if "replicas" in config_dict["deploy"].keys():
-            services_attr_dict["mode"] = get_service_mode(
-                replicas=config_dict["deploy"].get("replicas"))
-
-        if "labels" in config_dict["deploy"].keys():
-            services_attr_dict["labels"] = config_dict["deploy"].get("labels")
-
-    if "command" in config_dict:
-        if isinstance(config_dict["command"], list):
-            services_attr_dict["args"] = config_dict["command"]
-        elif isinstance(config_dict["command"], str):
-            services_attr_dict["args"] = [config_dict["command"]]
-        else:
-            raise TypeError
-
-    if "networks" in config_dict:
-        services_attr_dict["networks"] = [stack_name + "_" + network
-                                          for network in
-                                          config_dict["networks"]]
-
-    if "labels" in config_dict:
-        if isinstance(config_dict["labels"], dict):
-            services_attr_dict["container_labels"] = config_dict["labels"]
-        elif isinstance(config_dict["labels"], list):
-            services_attr_dict["container_labels"] = \
-                get_service_labels(config_dict["labels"])
-    return services_attr_dict
-
-
-def get_service_endpoint_spec(ports: List[str]) -> EndpointSpec:
-
-    # This function needs more validation as there are different ways
-    # to declare ports in a compose file
-    # At the moment only "8000:8000" is supported
-    ports_dict = dict()
-    for p in ports:
-        p_str = p.split(":")
-        ports_dict[int(p_str[0])] = int(p_str[1])
-    return EndpointSpec(ports=ports_dict)
-
-
-def get_service_labels(labels: List[str]) -> Dict:
-    label_dict = dict()
-    for label in labels:
-        try:
-            label_key, label_value = label.split("=")
-            label_dict[label_key] = label_value
-        # In case the label doesn"t have any value a ValueError will be raised
-        # this handles this exception adding the label without value
-        except ValueError:
-            label_dict[label] = ""
-    return label_dict
-
-
-def get_service_mode(mode: str="replicated",
-                     replicas: int=None) -> ServiceMode:
-    return ServiceMode(mode=mode, replicas=replicas)
+def check_dict_keys(dictionary: Dict, valid_keys: List[str]) -> None:
+    [dictionary.pop(key) for key in dictionary.keys() if key not in valid_keys]

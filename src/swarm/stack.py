@@ -23,7 +23,7 @@ from docker.models import services, networks
 
 from .exceptions import StackNameExists, StackNotFound
 from .network import Network, load_networks
-from .service import Service, load_services
+from .service import Service
 from .volume import Volume, load_volumes
 
 
@@ -33,11 +33,14 @@ def create(obj_list: List[Union[Volume, Network, Service]],
         obj.create(client)
 
 
+def create_svc(obj_list: List[Service]) -> None:
+    for obj in obj_list:
+        obj.create()
+
+
 def create_stack(stack_name: str,
                  compose_file: Dict,
                  client: DockerClient) -> List[Service]:
-
-    service_list = list()
 
     # Check if stack_name is already in use
     if get_stack_services(stack_name, client):
@@ -58,12 +61,12 @@ def create_stack(stack_name: str,
         )
         create(volume_list, client)
 
-    if compose_file.get("services"):
-        service_list = load_services(
-            stack_name,
-            compose_file.get("services")
-        )
-        create(service_list, client)
+    service_list = [
+        Service(svc_name, client, stack_name=stack_name, **svc_attrs)
+        for svc_name, svc_attrs in compose_file.get("services").items()
+        if compose_file.get("services")
+    ]
+    create_svc(service_list)
     return service_list
 
 
