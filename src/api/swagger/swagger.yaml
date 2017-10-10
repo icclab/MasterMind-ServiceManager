@@ -14,6 +14,30 @@ basePath: "/v1"
 schemes:
 - "http"
 paths:
+  /swarm:
+    post:
+      tags:
+      - "Swarm"
+      summary: "Get swarm status"
+      description: ""
+      operationId: "swarm_status"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "swarm"
+        description: "Get Swarm"
+        required: true
+        schema:
+          $ref: "#/definitions/Swarm"
+      responses:
+        200:
+          description: "OK"
+      x-tags:
+      - tag: "Swarm"
+      x-swagger-router-controller: "api.controllers.swarm_controller"
   /stack:
     post:
       tags:
@@ -39,7 +63,7 @@ paths:
       - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
   /stack/{name}:
-    get:
+    post:
       tags:
       - "Stack"
       summary: "Get the list of services of a stack"
@@ -54,7 +78,7 @@ paths:
         required: true
         type: "string"
       - in: "body"
-        name: "getStack"
+        name: "stack"
         description: ""
         required: true
         schema:
@@ -104,6 +128,19 @@ definitions:
         type: "string"
       compose-vars:
         type: "string"
+      engine-url:
+        type: "string"
+      ca-cert:
+        type: "string"
+      cert:
+        type: "string"
+      cert-key:
+        type: "string"
+  Swarm:
+    type: "object"
+    required:
+    - "engine-url"
+    properties:
       engine-url:
         type: "string"
       ca-cert:

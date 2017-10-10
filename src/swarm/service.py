@@ -51,11 +51,12 @@ class Service(object):
             name,
             client,
             image=None,
-            args=None,
+            command=None,
             entrypoint=None,
             environment=None,
             hostname=None,
             labels=None,
+            links=None,
             logging=None,
             volumes=None,
             networks=None,
@@ -66,12 +67,13 @@ class Service(object):
             user=None,
             workdir=None
     ):
-        self.args = args
+        self.command = [command]
         self.client = client
         self.deploy = deploy
         self.entrypoint = entrypoint
         self.environment = environment
         self.hostname = hostname
+        self.links = links
         self.logging = logging
         self.image = image
         self.name = name
@@ -100,7 +102,7 @@ class Service(object):
     def create(self):
         self.client.services.create(self.image,
                                     command=self.entrypoint,
-                                    args=self.args,
+                                    args=self.command,
                                     # constraints=self.constraints,
                                     container_labels=self.container_labels,
                                     endpoint_spec=self.endpoint_spec,
@@ -163,7 +165,7 @@ class Service(object):
                 )
             )
             else network for network in self.networks
-        ]
+        ] if self.networks else []
 
     def _service_endpoint_specs(self, ports: List[str]) -> None:
         ports_dict = dict()

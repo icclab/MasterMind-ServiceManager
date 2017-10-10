@@ -1,14 +1,14 @@
 # Copyright (c) 2017. Zuercher Hochschule fuer Angewandte Wissenschaften
 # All Rights Reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# Licensed under the Apache License, Version 2.0 (the 'License'); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
 #
 # http:#www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
@@ -22,18 +22,12 @@ from docker import DockerClient
 from docker.models import services, networks
 
 from .exceptions import StackNameExists, StackNotFound
-from .network import Network, load_networks
+from .network import Network
 from .service import Service
-from .volume import Volume, load_volumes
+from .volume import Volume
 
 
-def create(obj_list: List[Union[Volume, Network, Service]],
-           client: DockerClient) -> None:
-    for obj in obj_list:
-        obj.create(client)
-
-
-def create_svc(obj_list: List[Service]) -> None:
+def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
     for obj in obj_list:
         obj.create()
 
@@ -44,35 +38,35 @@ def create_stack(stack_name: str,
 
     # Check if stack_name is already in use
     if get_stack_services(stack_name, client):
-        raise StackNameExists("Stack name already in use.")
+        raise StackNameExists('Stack name already in use.')
 
-    if compose_file.get("networks"):
-        network_list = load_networks(
-            stack_name,
-            compose_file.get("networks"),
-            client
-        )
-        create(network_list, client)
+    network_list = [
+        Network(net_name, client, stack_name=stack_name, **net_attrs)
+        for net_name, net_attrs in compose_file.get('networks').items()
+    ] if compose_file.get('networks') else []
+    network_list = list(filter(lambda comp: comp.external is not True,
+                               network_list))
+    create(network_list)
 
-    if compose_file.get("volumes"):
-        volume_list = load_volumes(
-            stack_name,
-            compose_file.get('volumes')
-        )
-        create(volume_list, client)
+    volume_list = [
+        Volume(vol_name, client, stack_name=stack_name, **vol_attrs)
+        for vol_name, vol_attrs in compose_file.get('volumes').items()
+    ] if compose_file.get('volumes') else []
+    volume_list = list(filter(lambda comp: comp.external is not True,
+                              volume_list))
+    create(volume_list)
 
     service_list = [
         Service(svc_name, client, stack_name=stack_name, **svc_attrs)
-        for svc_name, svc_attrs in compose_file.get("services").items()
-        if compose_file.get("services")
-    ]
-    create_svc(service_list)
+        for svc_name, svc_attrs in compose_file.get('services').items()
+    ] if compose_file.get('services') else []
+    create(service_list)
     return service_list
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:
     if not get_stack_services(stack_name, client):
-        raise StackNotFound("Stack not found.")
+        raise StackNotFound('Stack not found.')
 
     service_list = get_stack_services(stack_name, client)
     for service in service_list:
@@ -84,49 +78,51 @@ def remove_stack(stack_name: str, client: DockerClient) -> None:
 
 
 def get_stack_health(stack_name: str, client: DockerClient) -> List[Dict]:
-    if not get_stack_services(stack_name, client):
-        raise StackNotFound("Stack not found.")
-
     service_list = get_stack_services(stack_name, client)
+    if not service_list:
+        raise StackNotFound('Stack not found.')
 
-    stack_status = list()
-    for service in service_list:
-        service_attr = service.attrs["Spec"]
-
-        service_tasks = service.tasks()
-        service_task_status = [task for task in service_tasks if
-                               task["Status"]["State"] == "running"]
-        stack_status.append(
-            {
-                "Name": service_attr["Name"],
-                "Status": "{0}/{1}".format(
-                    len(service_task_status),
-                    service_attr["Mode"]["Replicated"]["Replicas"]
-                )
-            }
-        )
+    stack_status = list(map(_filter_service_info, service_list))
     return stack_status
+
+
+def _filter_service_info(svc):
+    svc_attrs = svc.attrs.get('Spec')
+    service_tasks = svc.tasks()
+
+    service_task_status = list(
+        filter(
+            lambda tsk: tsk.get('Status').get('State') == 'running',
+            service_tasks
+        )
+    )
+    return dict(
+        name=svc_attrs.get('Name'),
+        status='{0}/{1}'.format(
+            len(service_task_status),
+            svc_attrs.get('Mode').get('Replicated').get('Replicas')
+        )
+    )
 
 
 def get_stack_services(stack_name: str,
                        client: DockerClient) -> List[services.Service]:
-    stack_services = list()
     stack_service_ids = list()
     service_list = client.services.list(filters={'name': stack_name})
 
     for service in service_list:
         try:
-            if service.attrs["Spec"]["Labels"]["com.docker.stack.namespace"] \
+            if service.attrs['Spec']['Labels']['com.docker.stack.namespace'] \
                     == stack_name:
-                stack_service_ids.append(service.attrs["ID"])
+                stack_service_ids.append(service.attrs['ID'])
 
         # Jump to the next service in the list in case the service doesn't have
-        # the "com.docker.stack.namespace" label
+        # the 'com.docker.stack.namespace' label
         except KeyError:
             continue
 
-    for service in stack_service_ids:
-        stack_services.append(client.services.get(service))
+    stack_services = [client.services.get(service)
+                      for service in stack_service_ids]
     return stack_services
 
 
@@ -138,9 +134,9 @@ def get_stack_networks(stack_name: str,
 
     for network in network_list:
         try:
-            if network.attrs["Labels"]["com.docker.stack.namespace"] \
+            if network.attrs['Labels']['com.docker.stack.namespace'] \
                     == stack_name:
-                stack_network_ids.append(network.attrs["Id"])
+                stack_network_ids.append(network.attrs['Id'])
         except KeyError:
             continue
 

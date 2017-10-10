@@ -15,9 +15,6 @@
 #
 # AUTHOR: Bruno Grazioli
 
-from docker import DockerClient
-from typing import (List, Dict)
-
 from.exceptions import VolumeNotFound
 
 VOLUME_KEYS = [
@@ -32,12 +29,16 @@ class Volume(object):
     def __init__(
             self,
             name,
+            client,
+            stack_name=None,
             driver=None,
             driver_opts=None,
             external=False,
             labels=None,
     ):
         self.name = name
+        self.client = client
+        self.stack_name = stack_name
         self.driver = driver
         self.driver_opts = driver_opts
         self.external = external
@@ -46,44 +47,27 @@ class Volume(object):
     def __repr__(self):
         return "<Volume: {}>".format(self.name)
 
-    def create(self, client: DockerClient) -> None:
+    def create(self) -> None:
         if self.external:
-            self.check_external_network(client)
-        client.volumes.create(name=self.name,
-                              driver=self.driver,
-                              driver_opts=self.driver_opts,
-                              labels=self.labels)
+            self._check_external_volume()
+        self.client.volumes.create(name=self.name,
+                                   driver=self.driver,
+                                   driver_opts=self.driver_opts,
+                                   labels=self.labels)
 
-    def check_external_network(self, client: DockerClient):
-        if not client.volume.list(names=self.name):
+    def _initialize_volume(self):
+        if self.external:
+            self._check_external_volume()
+
+        self.name = self.stack_name + "_" + self.name if self.stack_name and \
+            not self.external else self.name
+
+    def _check_external_volume(self):
+        if not self.client.volume.list(names=self.name):
             raise VolumeNotFound("External network not found.")
 
-
-def load_volumes(stack_name: str,
-                 volume_dict: Dict) -> List[Volume]:
-
-    volumes = list()
-    for volume_name, volume_attr in volume_dict.items():
-        volume_configuration_dict = set_volume_configuration(stack_name,
-                                                             volume_attr)
-        volume = Volume(
-            name=stack_name + "_" + volume_name,
-            **volume_configuration_dict
-        )
-        volumes.append(volume)
-    return volumes
-
-
-def set_volume_configuration(stack_name: str,
-                             config_dict: Dict) -> Dict:
-
-    volume_attr_dict = dict()
-    volume_attr_dict["labels"] = dict()
-    volume_attr_dict["labels"]["com.docker.stack.namespace"] = stack_name
-
-    if config_dict:
-        for key in VOLUME_KEYS:
-            if key in config_dict:
-                volume_attr_dict[key] = config_dict[key]
-
-    return volume_attr_dict
+    def _volume_labels(self):
+        if self.stack_name:
+            self.labels.update(
+                {"com.docker.stack.namespace": self.stack_name}
+            )

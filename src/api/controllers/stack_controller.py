@@ -32,7 +32,7 @@ from swarm.exceptions import NetworkNotFound, StackNameExists, VolumeNotFound,\
     InvalidYAMLFile, StackNotFound
 
 
-def get_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
+def get_stack(name, stack) -> Tuple[Dict, int]:
 
     temp_files = dict()
     stack = Stack.from_dict(connexion.request.get_json())
@@ -41,8 +41,7 @@ def get_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
         temp_files = create_temp_files(stack.ca_cert,
                                        stack.cert,
                                        stack.cert_key)
-        cli = get_client(stack, tls=temp_files)
-
+        cli = get_client(stack.engine_url, tls=temp_files)
         stack_status = get_stack_health(name, cli)
     except ConnectionError:
         return response(400, "Connection error, "
@@ -64,7 +63,7 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
         temp_files = create_temp_files(stack.ca_cert,
                                        stack.cert,
                                        stack.cert_key)
-        cli = get_client(stack, tls=temp_files)
+        cli = get_client(stack.engine_url, tls=temp_files)
 
         compose = parse_compose_file(stack.compose_file,
                                      stack.compose_vars)
@@ -96,7 +95,7 @@ def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
         temp_files = create_temp_files(stack.ca_cert,
                                        stack.cert,
                                        stack.cert_key)
-        cli = get_client(stack, tls=temp_files)
+        cli = get_client(stack.engine_url, tls=temp_files)
 
         remove_stack(name, cli)
     except ConnectionError:
@@ -110,7 +109,7 @@ def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
     return response(200, "Stack {0} deleted.".format(name))
 
 
-def get_client(client: Stack, tls: Dict=None):
+def get_client(engine_url: str, tls: Dict=None):
     tls_config = False
     if tls:
         tls_config = docker.tls.TLSConfig(
@@ -121,7 +120,7 @@ def get_client(client: Stack, tls: Dict=None):
             ),
             verify=tls['ca_cert'].name
         )
-    return docker.DockerClient(base_url=client.engine_url,
+    return docker.DockerClient(base_url=engine_url,
                                version="1.26",
                                tls=tls_config)
 
