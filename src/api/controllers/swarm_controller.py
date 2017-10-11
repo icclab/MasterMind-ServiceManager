@@ -1,7 +1,7 @@
 import connexion
 from api.models.swarm import Swarm
 from api.controllers.stack_controller import get_client, create_temp_files, \
-    response, StackNotFound, close_temp_files
+    response, close_temp_files
 from swarm.swarm import get_swarm_status
 
 
@@ -20,8 +20,6 @@ def swarm_status(swarm):
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
-    except StackNotFound as err:
-        return response(404, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)

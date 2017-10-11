@@ -67,7 +67,7 @@ class Service(object):
             user=None,
             workdir=None
     ):
-        self.command = [command]
+        self.command = command
         self.client = client
         self.deploy = deploy
         self.entrypoint = entrypoint
@@ -138,6 +138,9 @@ class Service(object):
             self._service_labels(
                 self.deploy.get('labels')
             )
+
+        if self.command and isinstance(self.command, str):
+            self.command = list(self.command)
 
         if self.deploy and self.deploy.get('restart_policy'):
             self._service_restart_policy(

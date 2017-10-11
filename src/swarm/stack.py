@@ -36,54 +36,56 @@ def create_stack(stack_name: str,
                  compose_file: Dict,
                  client: DockerClient) -> List[Service]:
 
-    # Check if stack_name is already in use
-    if get_stack_services(stack_name, client):
+    if _get_stack_services(stack_name, client):
         raise StackNameExists('Stack name already in use.')
 
-    network_list = [
-        Network(net_name, client, stack_name=stack_name, **net_attrs)
-        for net_name, net_attrs in compose_file.get('networks').items()
-    ] if compose_file.get('networks') else []
-    network_list = list(filter(lambda comp: comp.external is not True,
-                               network_list))
+    network_list = list(
+        map(lambda nt: _create_obj_from_dict(nt, Network, client, stack_name),
+            compose_file.get('networks').items())
+    ) if compose_file.get('networks') else []
     create(network_list)
 
-    volume_list = [
-        Volume(vol_name, client, stack_name=stack_name, **vol_attrs)
-        for vol_name, vol_attrs in compose_file.get('volumes').items()
-    ] if compose_file.get('volumes') else []
-    volume_list = list(filter(lambda comp: comp.external is not True,
-                              volume_list))
+    volume_list = list(
+        map(lambda vol: _create_obj_from_dict(vol, Volume, client, stack_name),
+            compose_file.get('volumes').items())
+    ) if compose_file.get('volumes') else []
     create(volume_list)
 
-    service_list = [
-        Service(svc_name, client, stack_name=stack_name, **svc_attrs)
-        for svc_name, svc_attrs in compose_file.get('services').items()
-    ] if compose_file.get('services') else []
+    service_list = list(
+        map(lambda sv: _create_obj_from_dict(sv, Service, client, stack_name),
+            compose_file.get('services').items())
+    )if compose_file.get('services') else []
     create(service_list)
     return service_list
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:
-    if not get_stack_services(stack_name, client):
+    if not _get_stack_services(stack_name, client):
         raise StackNotFound('Stack not found.')
 
-    service_list = get_stack_services(stack_name, client)
+    service_list = _get_stack_services(stack_name, client)
     for service in service_list:
         service.remove()
 
-    network_list = get_stack_networks(stack_name, client)
+    network_list = _get_stack_networks(stack_name, client)
     for network in network_list:
         network.remove()
 
 
 def get_stack_health(stack_name: str, client: DockerClient) -> List[Dict]:
-    service_list = get_stack_services(stack_name, client)
+    service_list = _get_stack_services(stack_name, client)
     if not service_list:
         raise StackNotFound('Stack not found.')
 
     stack_status = list(map(_filter_service_info, service_list))
     return stack_status
+
+
+def _create_obj_from_dict(dictionary, obj_class, client, stack_name):
+    obj_name, obj_attrs = dictionary
+    if not obj_attrs:
+        obj_attrs = {}
+    return obj_class(obj_name, client, stack_name=stack_name, **obj_attrs)
 
 
 def _filter_service_info(svc):
@@ -105,8 +107,8 @@ def _filter_service_info(svc):
     )
 
 
-def get_stack_services(stack_name: str,
-                       client: DockerClient) -> List[services.Service]:
+def _get_stack_services(stack_name: str,
+                        client: DockerClient) -> List[services.Service]:
     stack_service_ids = list()
     service_list = client.services.list(filters={'name': stack_name})
 
@@ -126,8 +128,8 @@ def get_stack_services(stack_name: str,
     return stack_services
 
 
-def get_stack_networks(stack_name: str,
-                       client: DockerClient) -> List[networks.Network]:
+def _get_stack_networks(stack_name: str,
+                        client: DockerClient) -> List[networks.Network]:
     stack_networks = list()
     stack_network_ids = list()
     network_list = client.networks.list(names=[stack_name])
