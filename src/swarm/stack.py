@@ -91,8 +91,7 @@ def _create_obj_from_dict(dictionary, obj_class, client, stack_name):
 
 def _create_default_network(stack_name, client):
     net_name = "default"
-    net = Network(net_name, client, stack_name=stack_name, driver="overlay")
-    return [net]
+    return [Network(net_name, client, stack_name=stack_name, driver="overlay")]
 
 
 def _filter_service_info(svc):

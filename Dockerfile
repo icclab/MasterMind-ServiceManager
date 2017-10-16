@@ -4,10 +4,14 @@ WORKDIR /home/
 
 RUN apk add --update git python3-dev libffi-dev gcc musl-dev openssl-dev && \
     git clone https://github.com/icclab/MasterMind-ServiceManager.git && \
-    cd MasterMind-ServiceManager/docker-py && pip3 install -r requirements.txt && \
+    git clone https://github.com/docker/docker-py.git && \
+    cd docker-py && \
+    git fetch origin pull/1769/head:net-attach && \
+    git checkout net-attach && \
+    pip3 install -r requirements.txt && \
     python3 setup.py install && \
     apk del git python3-dev libffi-dev gcc musl-dev openssl-dev && \
-    cd ../src && \
+    cd ../MasterMind-ServiceManager/src && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 
