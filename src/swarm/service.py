@@ -18,7 +18,7 @@
 import enum
 
 from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
-    UpdateConfig  # Resources
+    UpdateConfig, NetworkAttachment
 from typing import (List, Dict)
 
 
@@ -77,7 +77,7 @@ class Service(object):
         self.logging = logging
         self.image = image
         self.name = name
-        self.networks = networks
+        self.networks = networks or ["default"]
         self.ports = ports
         self.stack_name = stack_name
         self.stop_grace_period = stop_grace_period
@@ -85,7 +85,7 @@ class Service(object):
         self.volumes = volumes
         self.workdir = workdir
 
-        self.container_labels = None
+        self.container_labels = dict()
         self.endpoint_spec = None
         self.service_labels = dict()
         self.log_driver = None
@@ -94,7 +94,7 @@ class Service(object):
         self.restart_policy = None
         self.update_config = None
         self._initialize_service()
-        self._service_container_labels(labels) if labels else None
+        self._service_container_labels(labels)
 
     def __repr__(self):
         return "<Service: {}>".format(self.name)
@@ -140,7 +140,7 @@ class Service(object):
             )
 
         if self.command and isinstance(self.command, str):
-            self.command = list(self.command)
+            self.command = self.command.split()
 
         if self.deploy and self.deploy.get('restart_policy'):
             self._service_restart_policy(
@@ -160,7 +160,7 @@ class Service(object):
 
     def _check_network_names(self):
         prefix = self.stack_name + "_"
-        self.networks = [
+        networks = [
             prefix + network if prefix + network in list(
                 map(
                     lambda netw: netw.name,
@@ -168,7 +168,11 @@ class Service(object):
                 )
             )
             else network for network in self.networks
-        ] if self.networks else []
+        ]
+        self.networks = list(map(
+            lambda net: NetworkAttachment(network=net, aliases=[self.name]),
+            networks
+        ))
 
     def _service_endpoint_specs(self, ports: List[str]) -> None:
         ports_dict = dict()
@@ -204,6 +208,10 @@ class Service(object):
                 except ValueError:
                     label_dict[label] = ""
             self.container_labels = label_dict
+        if self.stack_name:
+            self.container_labels.update(
+                {'com.docker.stack.namespace': self.stack_name}
+            )
 
     def _service_labels(self, labels):
         self.service_labels.update(labels)

@@ -42,7 +42,8 @@ def create_stack(stack_name: str,
     network_list = list(
         map(lambda nt: _create_obj_from_dict(nt, Network, client, stack_name),
             compose_file.get('networks').items())
-    ) if compose_file.get('networks') else []
+    ) if compose_file.get('networks') else _create_default_network(stack_name,
+                                                                   client)
     create(network_list)
 
     volume_list = list(
@@ -88,10 +89,15 @@ def _create_obj_from_dict(dictionary, obj_class, client, stack_name):
     return obj_class(obj_name, client, stack_name=stack_name, **obj_attrs)
 
 
+def _create_default_network(stack_name, client):
+    net_name = "default"
+    net = Network(net_name, client, stack_name=stack_name, driver="overlay")
+    return [net]
+
+
 def _filter_service_info(svc):
     svc_attrs = svc.attrs.get('Spec')
     service_tasks = svc.tasks()
-
     service_task_status = list(
         filter(
             lambda tsk: tsk.get('Status').get('State') == 'running',
@@ -123,8 +129,9 @@ def _get_stack_services(stack_name: str,
         except KeyError:
             continue
 
-    stack_services = [client.services.get(service)
-                      for service in stack_service_ids]
+    stack_services = list(
+        map(lambda svc_id: client.services.get(svc_id), stack_service_ids)
+    )
     return stack_services
 
 

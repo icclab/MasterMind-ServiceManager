@@ -5,7 +5,8 @@ WORKDIR /home/
 RUN apk add --update git python3 && \
     git clone https://github.com/icclab/MasterMind-ServiceManager.git && \
     apk del git && \
-    cd MasterMind-ServiceManager/src && \
+    cd MasterMind-ServiceManager/docker-py && python3 setup.py install && \
+    cd ../src && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 
