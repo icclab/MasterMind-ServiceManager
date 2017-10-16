@@ -1,11 +1,12 @@
-FROM alpine:3.6
+FROM python:3.5-alpine
 
 WORKDIR /home/
 
-RUN apk add --update git python3 && \
+RUN apk add --update git python3-dev libffi-dev gcc musl-dev openssl-dev && \
     git clone https://github.com/icclab/MasterMind-ServiceManager.git && \
-    apk del git && \
-    cd MasterMind-ServiceManager/docker-py && python3 setup.py install && \
+    cd MasterMind-ServiceManager/docker-py && pip3 install -r requirements.txt && \
+    python3 setup.py install && \
+    apk del git python3-dev libffi-dev gcc musl-dev openssl-dev && \
     cd ../src && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
