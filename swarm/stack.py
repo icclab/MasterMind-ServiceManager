@@ -141,7 +141,12 @@ def _get_stack_networks(stack_name: str,
     return stack_networks
 
 
-def _check_component_labels(obj: Dict, stack_name:str):
+def _check_component_labels(obj: Dict, stack_name: str):
+    # Containers and networks have slightly different structures
+    # reassigning 'Spec' to obj will enable to retrieve labels for both objects
+    obj_id = obj.get('ID') if obj.get('ID') else obj.get('Id')
+    if obj.get('Spec'):
+        obj = obj.get('Spec')
     if obj.get('Labels').get('com.docker.stack.namespace') and \
             obj.get('Labels').get('com.docker.stack.namespace') == stack_name:
-        return obj.get('ID') if obj.get('ID') else obj.get('Id')
+        return obj_id

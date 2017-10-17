@@ -15,6 +15,6 @@ RUN apk add --update git python3-dev libffi-dev gcc musl-dev openssl-dev && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 
-WORKDIR /home/MasterMind-ServiceManager/src/
+WORKDIR /home/MasterMind-ServiceManager/
 
 ENTRYPOINT python3 -m api
