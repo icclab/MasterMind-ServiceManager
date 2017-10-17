@@ -89,7 +89,8 @@ paths:
       x-tags:
       - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
-    delete:
+  /stack/delete/{name}:
+    post:
       tags:
       - "Stack"
       summary: "Delete services of a stack"
