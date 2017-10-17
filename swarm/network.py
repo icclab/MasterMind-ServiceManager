@@ -16,6 +16,7 @@
 # AUTHOR: Bruno Grazioli
 
 from .exceptions import NetworkNotFound
+from typing import Dict
 
 IPAM_CONFIG_KEYS = [
     'driver',
@@ -77,24 +78,23 @@ class Network(object):
         if self.external:
             self.check_external_network_exists()
 
-        self.name = self.stack_name + "_" + self.name if self.stack_name and \
-            not self.external else self.name
+        if self.stack_name:
+            if not self.external:
+                self.name = self.stack_name + "_" + self.name
+            self.labels.update({'com.docker.stack.namespace': self.stack_name})
 
     def _network_labels(self):
-        lbls = self.labels
-        self.labels = dict()
-        if isinstance(lbls, list):
-            for label in lbls:
-                try:
-                    key, value = label.split('=')
-                except ValueError:
-                    key = label
-                    value = ""
-                self.labels[key] = value
-        if self.stack_name:
-            self.labels.update(
-                {'com.docker.stack.namespace': self.stack_name}
-            )
+        if isinstance(self.labels, list):
+            def label_to_dict(label: str, dictionary: Dict):
+                if "=" in label:
+                    label_key, label_value = label.split("=")
+                    dictionary[label_key] = label_value
+                else:
+                    dictionary[label] = ""
+
+            lbls = self.labels
+            self.labels = dict()
+            map(lambda lbl: label_to_dict(lbl, self.labels), lbls)
 
     def check_external_network_exists(self):
         if not self.client.networks.list(names=self.name):

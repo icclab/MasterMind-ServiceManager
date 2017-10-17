@@ -11,7 +11,7 @@ RUN apk add --update git python3-dev libffi-dev gcc musl-dev openssl-dev && \
     pip3 install -r requirements.txt && \
     python3 setup.py install && \
     apk del git python3-dev libffi-dev gcc musl-dev openssl-dev && \
-    cd ../MasterMind-ServiceManager/src && \
+    cd ../MasterMind-ServiceManager && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 

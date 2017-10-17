@@ -114,20 +114,12 @@ def _filter_service_info(svc):
 
 def _get_stack_services(stack_name: str,
                         client: DockerClient) -> List[services.Service]:
-    stack_service_ids = list()
     service_list = client.services.list(filters={'name': stack_name})
 
-    for service in service_list:
-        try:
-            if service.attrs['Spec']['Labels']['com.docker.stack.namespace'] \
-                    == stack_name:
-                stack_service_ids.append(service.attrs['ID'])
-
-        # Jump to the next service in the list in case the service doesn't have
-        # the 'com.docker.stack.namespace' label
-        except KeyError:
-            continue
-
+    stack_service_ids = list(map(
+        lambda obj: _check_component_labels(obj.attrs, stack_name),
+        service_list
+    ))
     stack_services = list(
         map(lambda svc_id: client.services.get(svc_id), stack_service_ids)
     )
@@ -137,17 +129,19 @@ def _get_stack_services(stack_name: str,
 def _get_stack_networks(stack_name: str,
                         client: DockerClient) -> List[networks.Network]:
     stack_networks = list()
-    stack_network_ids = list()
     network_list = client.networks.list(names=[stack_name])
 
-    for network in network_list:
-        try:
-            if network.attrs['Labels']['com.docker.stack.namespace'] \
-                    == stack_name:
-                stack_network_ids.append(network.attrs['Id'])
-        except KeyError:
-            continue
+    stack_network_ids = list(map(
+        lambda obj: _check_component_labels(obj.attrs, stack_name),
+        network_list
+    ))
 
     for network in stack_network_ids:
         stack_networks.append(client.networks.get(network))
     return stack_networks
+
+
+def _check_component_labels(obj: Dict, stack_name:str):
+    if obj.get('Labels').get('com.docker.stack.namespace') and \
+            obj.get('Labels').get('com.docker.stack.namespace') == stack_name:
+        return obj.get('ID') if obj.get('ID') else obj.get('Id')

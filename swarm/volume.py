@@ -59,15 +59,11 @@ class Volume(object):
         if self.external:
             self._check_external_volume()
 
-        self.name = self.stack_name + "_" + self.name if self.stack_name and \
-            not self.external else self.name
+        if self.stack_name:
+            if not self.external:
+                self.name = self.stack_name + "_" + self.name
+            self.labels.update({"com.docker.stack.namespace": self.stack_name})
 
     def _check_external_volume(self):
         if not self.client.volume.list(names=self.name):
             raise VolumeNotFound("External network not found.")
-
-    def _volume_labels(self):
-        if self.stack_name:
-            self.labels.update(
-                {"com.docker.stack.namespace": self.stack_name}
-            )

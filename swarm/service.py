@@ -19,7 +19,7 @@ import enum
 
 from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
-from typing import (List, Dict)
+from typing import List, Dict
 
 
 UPDATE_CONFIG_KEYS = [
@@ -121,54 +121,39 @@ class Service(object):
                                     workdir=self.workdir)
 
     def _initialize_service(self):
-
+        docker_stack_label = {'com.docker.stack.namespace': self.stack_name}
         self._check_network_names()
         if self.ports:
             self._service_endpoint_specs(self.ports)
 
         if self.stack_name:
-            self.service_labels.update(
-                {'com.docker.stack.namespace': self.stack_name}
-            )
+            self.service_labels.update(docker_stack_label)
+            self.container_labels.update(docker_stack_label)
+            self.name = self.stack_name + "_" + self.name
 
-        self.name = self.stack_name + "_" + self.name if self.stack_name \
-            else self.name
-
-        if self.deploy and self.deploy.get('labels'):
-            self._service_labels(
-                self.deploy.get('labels')
-            )
-
+        if self.deploy:
+            if self.deploy.get('labels'):
+                self._service_labels(self.deploy.get('labels'))
+            if self.deploy.get('restart_policy'):
+                self._service_restart_policy(self.deploy.get('restart_policy'))
+            if self.deploy.get('update_config'):
+                self._service_update_config(self.deploy.get('update_config'))
+            if self.deploy.get('mode') or self.deploy.get('replicas'):
+                self._service_mode(self.deploy)
         if self.command and isinstance(self.command, str):
             self.command = self.command.split()
 
-        if self.deploy and self.deploy.get('restart_policy'):
-            self._service_restart_policy(
-                self.deploy.get('restart_policy')
-            )
-
-        if self.deploy and self.deploy.get('update_config'):
-            self._service_update_config(
-                self.deploy.get('update_config')
-            )
-
-        if self.deploy and \
-                (self.deploy.get('mode') or self.deploy.get('replicas')):
-            self._service_mode(
-                self.deploy
-            )
-
     def _check_network_names(self):
-        prefix = self.stack_name + "_"
-        networks = [
-            prefix + network if prefix + network in list(
-                map(
+        def check_stack_network_exists(network: str):
+            prefix = self.stack_name + "_"
+            if prefix + network in list(map(
                     lambda netw: netw.name,
                     self.client.networks.list(names=[self.stack_name])
-                )
-            )
-            else network for network in self.networks
-        ]
+            )):
+                return prefix + network
+            else:
+                return network
+        networks = list(map(check_stack_network_exists, self.networks))
         self.networks = list(map(
             lambda net: NetworkAttachment(network=net, aliases=[self.name]),
             networks
@@ -177,8 +162,8 @@ class Service(object):
     def _service_endpoint_specs(self, ports: List[str]) -> None:
         ports_dict = dict()
         for p in ports:
-            p_str = p.split(":")
-            ports_dict[int(p_str[0])] = int(p_str[1])
+            p_host, p_container = p.split(":")
+            ports_dict[int(p_host)] = int(p_container)
         self.endpoint_spec = EndpointSpec(ports=ports_dict)
 
     def _service_mode(self, mode: Dict) -> None:
@@ -197,27 +182,20 @@ class Service(object):
 
     def _service_container_labels(self, labels) -> None:
         if isinstance(labels, dict):
-            self.container_labels = labels
+            self.container_labels.update(labels)
         elif isinstance(labels, list):
-            label_dict = dict()
-            for label in labels:
-                try:
+            def label_to_dict(label: str, dictionary: Dict):
+                if "=" in label:
                     label_key, label_value = label.split("=")
-                    label_dict[label_key] = label_value
-                # ValueError raised for labels without value
-                except ValueError:
-                    label_dict[label] = ""
-            self.container_labels = label_dict
-        if self.stack_name:
-            self.container_labels.update(
-                {'com.docker.stack.namespace': self.stack_name}
-            )
+                    dictionary[label_key] = label_value
+                else:
+                    dictionary[label] = ""
+            label_dict = dict()
+            map(lambda lbl: label_to_dict(lbl, label_dict), labels)
+            self.container_labels.update(label_dict)
 
     def _service_labels(self, labels):
         self.service_labels.update(labels)
-
-    def _service_logs(self, logging: Dict):
-        pass
 
 
 def check_dict_keys(dictionary: Dict, valid_keys: List[str]) -> None:
