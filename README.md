@@ -1,5 +1,7 @@
 # MasterMind-ServiceManager
 
+https://travis-ci.org/icclab/MasterMind-ServiceManager.svg?branch=master
+
 ## Installing the MasterMind API
 
 ### Python virtualenv
@@ -17,14 +19,14 @@ docker run -d -p 8080:8080 mastermind-sm
 
 ## Example usage of the API
 
-see: `src/api/controllers/default_controller.py`
+see: `api/controllers/stack_controller.py`
 
 ## Running the MasterMind API
 
 ```
-pip install -r src/requirements.txt
-cd src/api
-python app.py
+pip install -r requirements.txt
+python setup.py install
+python -m api
 ```
 
 # MasterMind Swagger generated server

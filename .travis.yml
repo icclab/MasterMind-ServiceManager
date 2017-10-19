@@ -4,7 +4,6 @@ python:
   - "3.5"
 env:
     - TOX_ENV=py35
-    - TOX_ENV=py36
     - TOX_ENV=flake8
 install:
     - pip install tox
