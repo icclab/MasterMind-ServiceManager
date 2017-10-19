@@ -1,6 +1,6 @@
 # MasterMind-ServiceManager
 
-https://travis-ci.org/icclab/MasterMind-ServiceManager.svg?branch=master
+[![Build Status](https://travis-ci.org/icclab/MasterMind-ServiceManager.svg?branch=master)](https://travis-ci.org/icclab/MasterMind-ServiceManager)
 
 ## Installing the MasterMind API
 
