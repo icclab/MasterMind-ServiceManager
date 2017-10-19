@@ -33,10 +33,9 @@ def get_swarm_status(docker_client: DockerClient) -> Dict:
 
 
 def _filter_node_info(node):
-    node_attr = node.attrs
     return dict(
-        resources=node_attr.get("Description").get("Resources"),
-        availability=node_attr.get("Spec").get("Availability"),
-        hostname=node_attr.get("Description").get("Hostname"),
-        address=node_attr.get("Status").get("Addr")
+        resources=node.attrs.get("Description").get("Resources"),
+        availability=node.attrs.get("Spec").get("Availability"),
+        hostname=node.attrs.get("Description").get("Hostname"),
+        address=node.attrs.get("Status").get("Addr")
     )

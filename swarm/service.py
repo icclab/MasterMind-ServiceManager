@@ -15,8 +15,6 @@
 #
 # AUTHOR: Bruno Grazioli
 
-import enum
-
 from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
 from typing import List, Dict
@@ -38,8 +36,7 @@ RESTART_POLICY_KEYS = [
 ]
 
 
-@enum.unique
-class Modes(enum.Enum):
+class Modes(object):
     """Enumeration for the types of service modes known to compose."""
     GLOBAL = "global"
     REPLICATED = "replicated"
@@ -79,7 +76,7 @@ class Service(object):
         self.name = name
         self.networks = networks or ["default"]
         self.ports = ports
-        self.stack_name = stack_name
+        self.stack_name = stack_name or ''
         self.stop_grace_period = stop_grace_period
         self.user = user
         self.volumes = volumes
