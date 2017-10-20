@@ -68,6 +68,7 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
         compose = parse_compose_file(stack.compose_file,
                                      stack.compose_vars)
         service_list = create_stack(stack.name, compose, cli)
+        service_list = service_list[0]
 
     except InvalidYAMLFile:
         return response(400, "Invalid yaml file.")

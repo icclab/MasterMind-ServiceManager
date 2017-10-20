@@ -34,7 +34,7 @@ class Volume(object):
             driver=None,
             driver_opts=None,
             external=False,
-            labels=None,
+            labels=None
     ):
         self.name = name
         self.client = client
@@ -43,13 +43,12 @@ class Volume(object):
         self.driver_opts = driver_opts
         self.external = external
         self.labels = labels or {}
+        self._initialize_volume()
 
     def __repr__(self):
         return "<Volume: {}>".format(self.name)
 
     def create(self) -> None:
-        if self.external:
-            self._check_external_volume()
         self.client.volumes.create(name=self.name,
                                    driver=self.driver,
                                    driver_opts=self.driver_opts,
@@ -65,5 +64,5 @@ class Volume(object):
             self.labels.update({"com.docker.stack.namespace": self.stack_name})
 
     def _check_external_volume(self):
-        if not self.client.volume.list(names=self.name):
+        if not self.client.volumes.list(names=[self.name]):
             raise VolumeNotFound("External network not found.")

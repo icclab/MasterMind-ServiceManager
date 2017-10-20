@@ -181,14 +181,16 @@ class Service(object):
         if isinstance(labels, dict):
             self.container_labels.update(labels)
         elif isinstance(labels, list):
-            def label_to_dict(label: str, dictionary: Dict):
+            def label_to_dict(label: str):
                 if "=" in label:
-                    label_key, label_value = label.split("=")
-                    dictionary[label_key] = label_value
+                    label_key, label_value = label.split('=')
+                    return {label_key: label_value}
                 else:
-                    dictionary[label] = ""
+                    return {label: ''}
             label_dict = dict()
-            map(lambda lbl: label_to_dict(lbl, label_dict), labels)
+            lbs = list(map(lambda lbl: label_to_dict(lbl), labels))
+            for lb in lbs:
+                label_dict.update(lb)
             self.container_labels.update(label_dict)
 
     def _service_labels(self, labels):
@@ -196,4 +198,5 @@ class Service(object):
 
 
 def check_dict_keys(dictionary: Dict, valid_keys: List[str]) -> None:
-    [dictionary.pop(key) for key in dictionary.keys() if key not in valid_keys]
+    dikt = dictionary.copy()
+    [dictionary.pop(key) for key in dikt.keys() if key not in valid_keys]

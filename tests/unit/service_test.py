@@ -18,7 +18,8 @@
 import unittest
 
 from .fake_api import MockDockerAPI
-from docker.types.services import ServiceMode, EndpointSpec
+from docker.types.services import ServiceMode, EndpointSpec, UpdateConfig, \
+    RestartPolicy
 from swarm.service import Service
 
 
@@ -63,7 +64,7 @@ class ServiceTest(unittest.TestCase):
         self.assertEquals(svc.mode, svc_mode)
 
     def test_service_labels_with_stack_name(self):
-        labels = {'labels': {'test': "driver"}}
+        labels = {'labels': {'test': 'driver'}}
         svc = Service(name=self.svc_name,
                       client=self.fake_client,
                       deploy=labels,
@@ -73,3 +74,60 @@ class ServiceTest(unittest.TestCase):
         svc_labels.update(self.stack_label)
 
         self.assertEquals(svc.service_labels, svc_labels)
+
+    def test_service_update_config(self):
+        update_config = {'update_config': {'parallelism': 2,
+                                           'delay': 3,
+                                           'monitor': 5000,
+                                           'failure_action': 'continue',
+                                           'max_failure_ratio': 0.1}}
+        svc = Service(name=self.svc_name,
+                      client=self.fake_client,
+                      deploy=update_config)
+        updt_config = UpdateConfig(parallelism=2, delay=3, monitor=5000,
+                                   failure_action='continue',
+                                   max_failure_ratio=0.1)
+
+        self.assertEquals(svc.update_config, updt_config)
+
+    def test_service_restart_policy(self):
+        restart_policy = {'restart_policy': {'condition': 'none',
+                                             'delay': 3,
+                                             'max_attempts': 5,
+                                             'window': 0}}
+        svc = Service(name=self.svc_name,
+                      client=self.fake_client,
+                      deploy=restart_policy)
+        rest_config = RestartPolicy(condition='none', delay=3, max_attempts=5,
+                                    window=0)
+
+        self.assertEquals(svc.restart_policy, rest_config)
+
+    def test_service_restart_policy_with_additional_paramenters(self):
+        restart_policy = {'restart_policy': {'condition': 'none',
+                                             'delay': 3,
+                                             'max_attempts': 5,
+                                             'window': 0,
+                                             'test': 'unused_parameter'}}
+        svc = Service(name=self.svc_name,
+                      client=self.fake_client,
+                      deploy=restart_policy)
+        rest_config = RestartPolicy(condition='none', delay=3, max_attempts=5,
+                                    window=0)
+
+        self.assertEquals(svc.restart_policy, rest_config)
+
+    def test_service_container_labels_dict(self):
+        labels = {'test': 'driver'}
+        svc = Service(name=self.svc_name,
+                      client=self.fake_client,
+                      labels=labels)
+        self.assertEquals(svc.container_labels, labels)
+
+    def test_service_container_labels_list(self):
+        labels = ['test=driver']
+        svc = Service(name=self.svc_name,
+                      client=self.fake_client,
+                      labels=labels)
+        lbls = {'test': 'driver'}
+        self.assertEquals(svc.container_labels, lbls)

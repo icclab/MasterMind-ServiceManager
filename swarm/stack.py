@@ -16,7 +16,7 @@
 # AUTHOR: Bruno Grazioli
 
 from __future__ import absolute_import
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 from docker import DockerClient
 from docker.models import services, networks
@@ -34,7 +34,7 @@ def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
 
 def create_stack(stack_name: str,
                  compose_file: Dict,
-                 client: DockerClient) -> List[Service]:
+                 client: DockerClient) -> Tuple:
 
     if _get_stack_services(stack_name, client):
         raise StackNameExists('Stack name already in use.')
@@ -57,7 +57,7 @@ def create_stack(stack_name: str,
             compose_file.get('services').items())
     )if compose_file.get('services') else []
     create(service_list)
-    return service_list
+    return service_list, network_list, volume_list
 
 
 def remove_stack(stack_name: str, client: DockerClient) -> None:

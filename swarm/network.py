@@ -16,7 +16,6 @@
 # AUTHOR: Bruno Grazioli
 
 from .exceptions import NetworkNotFound
-from typing import Dict
 
 IPAM_CONFIG_KEYS = [
     'driver',
@@ -85,17 +84,18 @@ class Network(object):
 
     def _network_labels(self):
         if isinstance(self.labels, list):
-            def label_to_dict(label: str, dictionary: Dict):
+            def label_to_dict(label: str):
                 if "=" in label:
-                    label_key, label_value = label.split("=")
-                    dictionary[label_key] = label_value
+                    label_key, label_value = label.split('=')
+                    return {label_key: label_value}
                 else:
-                    dictionary[label] = ""
-
-            lbls = self.labels
-            self.labels = dict()
-            map(lambda lbl: label_to_dict(lbl, self.labels), lbls)
+                    return {label: ''}
+            label_dict = dict()
+            lbs = list(map(lambda lbl: label_to_dict(lbl), self.labels))
+            for lb in lbs:
+                label_dict.update(lb)
+            self.labels = label_dict
 
     def check_external_network_exists(self):
-        if not self.client.networks.list(names=self.name):
+        if not self.client.networks.list(names=[self.name]):
             raise NetworkNotFound("External network not found.")

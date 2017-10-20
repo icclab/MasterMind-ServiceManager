@@ -15,26 +15,34 @@
 #
 # AUTHOR: Bruno Grazioli
 
-
-class MockDockerComponent:
-    def __init__(self, name):
-        self.name = name
-
-    def list(self, names=None, filters=None):
-        if names:
-            for name in names:
-                if name == self.name:
-                    return [self]
-            return []
-        if filters:
-            return []
-        return [self]
-
-    def create(self, *args, **kwargs):
-        return self, args, kwargs
+import yaml
 
 
-class MockDockerAPI:
-    networks = MockDockerComponent(name='default')
-    volumes = MockDockerComponent(name='test')
-    services = MockDockerComponent(name='test')
+def string_to_dict(string):
+    return yaml.safe_load(string)
+
+
+COMPOSE_WITHOUT_NETWORK_AND_VOLUMES = string_to_dict("""
+version: '3'
+services:
+  test:
+    image: test:1.13
+    ports:
+      - 8080:8080
+    environment:
+      LABEL: Test
+""")
+
+COMPOSE_WITH_NETWORK_AND_VOLUMES = string_to_dict("""
+version: '3'
+services:
+  test:
+    image: test:1.13
+    networks:
+      - backend
+networks:
+    backend:
+        driver: overlay
+volumes:
+    test-volume:
+""")
