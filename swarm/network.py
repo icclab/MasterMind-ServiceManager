@@ -64,13 +64,14 @@ class Network(object):
         return "<Network: {}>".format(self.name)
 
     def create(self):
-        self.client.networks.create(name=self.name,
-                                    driver=self.driver,
-                                    options=self.driver_options,
-                                    ipam=self.ipam,
-                                    check_duplicate=self.check_duplicate,
-                                    internal=self.internal,
-                                    labels=self.labels)
+        if not self.external:
+            self.client.networks.create(name=self.name,
+                                        driver=self.driver,
+                                        options=self.driver_options,
+                                        ipam=self.ipam,
+                                        check_duplicate=self.check_duplicate,
+                                        internal=self.internal,
+                                        labels=self.labels)
 
     def _initialize_network(self):
         self._network_labels()

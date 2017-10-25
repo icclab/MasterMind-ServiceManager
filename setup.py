@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
 from setuptools import setup, find_packages
 
 NAME = "mm"
@@ -41,8 +40,9 @@ setup(
     keywords=["mm", "docker", "swarm", "master", "mind", "mastermind"],
     install_requires=REQUIRES,
     packages=find_packages(),
-    # package_data={'': ['esm/swagger/swagger.yaml']},
-    # include_package_data=True,
+    package_data={'': ['api/swagger/swagger.yaml'],
+                  'api': ['swagger/*.yaml']},
+    include_package_data=True,
     long_description="""\
     TODO
     """

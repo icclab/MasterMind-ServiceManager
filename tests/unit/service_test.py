@@ -103,7 +103,7 @@ class ServiceTest(unittest.TestCase):
 
         self.assertEquals(svc.restart_policy, rest_config)
 
-    def test_service_restart_policy_with_additional_paramenters(self):
+    def test_service_restart_policy_with_additional_parameters(self):
         restart_policy = {'restart_policy': {'condition': 'none',
                                              'delay': 3,
                                              'max_attempts': 5,

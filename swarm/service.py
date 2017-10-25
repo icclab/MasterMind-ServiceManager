@@ -19,6 +19,7 @@ from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
 from typing import List, Dict
 
+from .network import Network
 
 UPDATE_CONFIG_KEYS = [
     'parallelism',
@@ -74,7 +75,7 @@ class Service(object):
         self.logging = logging
         self.image = image
         self.name = name
-        self.networks = networks or ["default"]
+        self.networks = networks or []
         self.ports = ports
         self.stack_name = stack_name or ''
         self.stop_grace_period = stop_grace_period
@@ -88,6 +89,7 @@ class Service(object):
         self.log_driver = None
         self.log_driver_options = None
         self.mode = None
+        self.network_attachments = None
         self.restart_policy = None
         self.update_config = None
         self._initialize_service()
@@ -110,7 +112,7 @@ class Service(object):
                                     log_driver_options=self.log_driver_options,
                                     mode=self.mode,
                                     name=self.name,
-                                    networks=self.networks,
+                                    networks=self.network_attachments,
                                     restart_policy=self.restart_policy,
                                     stop_grace_period=self.stop_grace_period,
                                     update_config=self.update_config,
@@ -119,7 +121,7 @@ class Service(object):
 
     def _initialize_service(self):
         docker_stack_label = {'com.docker.stack.namespace': self.stack_name}
-        self._check_network_names()
+        self._check_network_exists()
         if self.ports:
             self._service_endpoint_specs(self.ports)
 
@@ -140,21 +142,38 @@ class Service(object):
         if self.command and isinstance(self.command, str):
             self.command = self.command.split()
 
-    def _check_network_names(self):
-        def check_stack_network_exists(network: str):
+    def _check_network_exists(self):
+        def check_service_network_exists(network: str):
             prefix = self.stack_name + "_"
             if prefix + network in list(map(
                     lambda netw: netw.name,
-                    self.client.networks.list(names=[self.stack_name])
+                    self.client.networks.list(names=[network])
             )):
                 return prefix + network
             else:
                 return network
-        networks = list(map(check_stack_network_exists, self.networks))
-        self.networks = list(map(
-            lambda net: NetworkAttachment(network=net, aliases=[self.name]),
-            networks
-        ))
+        if self.networks:
+            networks = list(map(check_service_network_exists, self.networks))
+            self.network_attachments = list(map(
+                lambda nt: NetworkAttachment(network=nt, aliases=[self.name]),
+                networks
+            ))
+        else:
+            self._check_default_network_exists()
+
+    def _check_default_network_exists(self):
+        default_net = '{0}_{1}'.format(self.stack_name, 'default')
+        net = self.client.networks.list(names=[default_net])
+        if not net:
+            self._create_default_network()
+        self.network_attachments = [
+            NetworkAttachment(network=default_net, aliases=[self.name])
+        ]
+
+    def _create_default_network(self):
+        net = Network('default', self.client,
+                      stack_name=self.stack_name, driver="overlay")
+        net.create()
 
     def _service_endpoint_specs(self, ports: List[str]) -> None:
         ports_dict = dict()
