@@ -24,14 +24,6 @@ class StackError(Exception):
         return repr(self.msg)
 
 
-class StackNameExists(StackError):
-    pass
-
-
-class StackNotFound(StackError):
-    pass
-
-
 class NetworkNotFound(StackError):
     pass
 
@@ -41,4 +33,12 @@ class VolumeNotFound(StackError):
 
 
 class InvalidYAMLFile(StackError):
+    pass
+
+
+class SecretNotFound(StackError):
+    pass
+
+
+class InvalidFormat(StackError):
     pass

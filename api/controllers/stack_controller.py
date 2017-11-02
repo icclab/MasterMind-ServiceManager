@@ -27,9 +27,9 @@ from typing import Dict, Tuple
 from yaml import safe_load, scanner
 
 from api.models.stack import Stack
-from swarm.stack import create_stack, get_stack_health, remove_stack
-from swarm.exceptions import NetworkNotFound, StackNameExists, VolumeNotFound,\
-    InvalidYAMLFile, StackNotFound
+from swarm.stack import Stack as StackCls
+from swarm.exceptions import NetworkNotFound, VolumeNotFound,\
+    InvalidYAMLFile
 
 
 def get_stack(name, stack) -> Tuple[Dict, int]:
@@ -42,12 +42,11 @@ def get_stack(name, stack) -> Tuple[Dict, int]:
                                        stack.cert,
                                        stack.cert_key)
         cli = get_client(stack.engine_url, tls=temp_files)
-        stack_status = get_stack_health(name, cli)
+        stack_obj = StackCls(stack_name=name, client=cli)
+        stack_status = stack_obj.health()
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
-    except StackNotFound as err:
-        return response(404, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)
@@ -67,7 +66,9 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
 
         compose = parse_compose_file(stack.compose_file,
                                      stack.compose_vars)
-        service_list = create_stack(stack.name, compose, cli)
+        stack_obj = StackCls(stack_name=stack.name, compose_file=compose,
+                             client=cli)
+        service_list = stack_obj.create()
         service_list = service_list[0]
 
     except InvalidYAMLFile:
@@ -75,8 +76,6 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
-    except StackNameExists as err:
-        return response(400, err.msg)
     except NetworkNotFound as err:
         return response(400, err.msg)
     except VolumeNotFound as err:
@@ -97,13 +96,11 @@ def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
                                        stack.cert,
                                        stack.cert_key)
         cli = get_client(stack.engine_url, tls=temp_files)
-
-        remove_stack(name, cli)
+        stack_obj = StackCls(stack_name=name, client=cli)
+        stack_obj.remove()
     except ConnectionError:
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
-    except StackNotFound as err:
-        return response(404, err.msg)
     finally:
         if temp_files:
             close_temp_files(temp_files)

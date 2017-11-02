@@ -16,137 +16,165 @@
 # AUTHOR: Bruno Grazioli
 
 from __future__ import absolute_import
-from typing import List, Dict, Union, Tuple
-
+from typing import Dict, Union, Tuple, List, Iterable
 from docker import DockerClient
 from docker.models import services, networks
 
-from .exceptions import StackNameExists, StackNotFound
+from .exceptions import NetworkNotFound, VolumeNotFound
 from .network import Network
 from .service import Service
 from .volume import Volume
 
 
-def create(obj_list: List[Union[Volume, Network, Service]]) -> None:
-    for obj in obj_list:
-        obj.create()
+class Stack(object):
+    def __init__(self,
+                 stack_name: str=None,
+                 compose_file: Dict=None,
+                 client: DockerClient=None):
+        self.stack_name = stack_name
+        self.compose_file = compose_file
+        self.client = client
 
+        self.default_network_created = False
+        self.stack_networks = []
+        self.services = []
+        self.networks = []
+        self.volumes = []
+        self.service_dict = {}
+        self.network_dict = {}
+        self.volume_dict = {}
 
-def create_stack(stack_name: str,
-                 compose_file: Dict,
-                 client: DockerClient) -> Tuple:
+    def create(self) -> Tuple[List[Service], List[Network], List[Volume]]:
+        self.service_dict = self.compose_file.get('services')
+        self.network_dict = self.compose_file.get('networks') or {}
+        self.volume_dict = self.compose_file.get('volumes') or {}
 
-    if _get_stack_services(stack_name, client):
-        raise StackNameExists('Stack name already in use.')
+        self._create_networks()
+        self._create_volumes()
+        self._create_services()
+        return self.services, self.networks, self.volumes
 
-    network_list = list(
-        map(lambda nt: _create_obj_from_dict(nt, Network, client, stack_name),
-            compose_file.get('networks').items())
-    ) if compose_file.get('networks') else _create_default_network(stack_name,
-                                                                   client)
-    create(network_list)
+    def remove(self) -> None:
+        svc_list = self._get_stack_services()
+        net_list = self._get_stack_networks()
 
-    volume_list = list(
-        map(lambda vol: _create_obj_from_dict(vol, Volume, client, stack_name),
-            compose_file.get('volumes').items())
-    ) if compose_file.get('volumes') else []
-    create(volume_list)
+        for svc in svc_list:
+            svc.remove()
+        for net in net_list:
+            net.remove()
 
-    service_list = list(
-        map(lambda sv: _create_obj_from_dict(sv, Service, client, stack_name),
-            compose_file.get('services').items())
-    )if compose_file.get('services') else []
-    create(service_list)
-    return service_list, network_list, volume_list
+    def health(self) -> List[Dict]:
+        svc_list = self._get_stack_services()
+        svcs = list(map(
+            self._filter_service_info,
+            svc_list
+        ))
+        return svcs
 
+    def _create_networks(self) -> None:
+        def check_if_network_is_external(dictionary: Dict):
+            net_name, net_attrs = dictionary
+            if not net_attrs:
+                net_attrs = {}
+            if not net_attrs.get('external'):
+                self.stack_networks.append(net_name)
+                return self._create_obj_from_dict(dictionary, Network)
+            if not self.client.networks.list(names=[net_name]):
+                raise NetworkNotFound(
+                            "External network {0} not found.".format(net_name)
+                )
+            return net_name
+        self.networks = list(map(
+            lambda nt: check_if_network_is_external(nt),
+            self.network_dict.items()
+        ))
+        for net in self.networks:
+            if isinstance(net, Network):
+                net.create(self.client)
 
-def remove_stack(stack_name: str, client: DockerClient) -> None:
-    if not _get_stack_services(stack_name, client):
-        raise StackNotFound('Stack not found.')
+    def _create_default_network(self) -> None:
+        default_net = Network(name='default',
+                              stack_name=self.stack_name,
+                              driver='overlay')
+        default_net.create(self.client)
+        self.networks.append(default_net)
 
-    service_list = _get_stack_services(stack_name, client)
-    for service in service_list:
-        service.remove()
+    def _create_volumes(self) -> None:
+        def check_if_volume_is_external(dictionary: Dict):
+            vol_name, vol_attrs = dictionary
+            if not vol_attrs:
+                vol_attrs = {}
+            if not vol_attrs.get('external'):
+                return self._create_obj_from_dict(dictionary, Volume)
+            if not self.client.volumes.list(names=[vol_name]):
+                raise VolumeNotFound(
+                    "External volume {0} not found.".format(vol_name)
+                )
+            return vol_name
+        self.volumes = list(map(
+            lambda vl: check_if_volume_is_external(vl),
+            self.volume_dict.items()
+        ))
+        for vol in self.volumes:
+            if isinstance(vol, Volume):
+                vol.create(self.client)
 
-    network_list = _get_stack_networks(stack_name, client)
-    for network in network_list:
-        network.remove()
+    def _create_services(self) -> None:
+        self._check_stack_service_attributes()
+        self.services = list(map(
+            lambda sc: self._create_obj_from_dict(sc, Service),
+            self.service_dict.items()
+        ))
+        for svc in self.services:
+            if isinstance(svc, Service):
+                svc.create(self.client)
 
+    def _check_stack_service_attributes(self) -> None:
+        for svc_name, svc_attrs in self.service_dict.items():
+            self._check_stack_service_networks(svc_attrs.get('networks') or [])
 
-def get_stack_health(stack_name: str, client: DockerClient) -> List[Dict]:
-    service_list = _get_stack_services(stack_name, client)
-    if not service_list:
-        raise StackNotFound('Stack not found.')
+    def _check_stack_service_networks(self, attrs: Union[List, Dict]) -> None:
+        if isinstance(attrs, list):
+            nets = attrs
+            for net in nets:
+                if net in self.stack_networks:
+                    nets[nets.index(net)] = '{0}_{1}'.format(
+                        self.stack_name, net
+                    )
+            else:
+                if not self.default_network_created:
+                    self._create_default_network()
+                    self.default_network_created = True
 
-    stack_status = list(map(_filter_service_info, service_list))
-    return stack_status
+    def _create_obj_from_dict(self, dictionary: Dict,
+                              obj_class) -> Union[Service, Network, Volume]:
+        obj_name, obj_attrs = dictionary
+        if not obj_attrs:
+            obj_attrs = {}
+        return obj_class(obj_name, stack_name=self.stack_name, **obj_attrs)
 
+    def _get_stack_services(self) -> Iterable[services.Service]:
+        filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
+        return self.client.services.list(filters={'label': filter_lbl})
 
-def _create_obj_from_dict(dictionary, obj_class, client, stack_name):
-    obj_name, obj_attrs = dictionary
-    if not obj_attrs:
-        obj_attrs = {}
-    return obj_class(obj_name, client, stack_name=stack_name, **obj_attrs)
-
-
-def _create_default_network(stack_name, client):
-    net_name = "default"
-    return [Network(net_name, client, stack_name=stack_name, driver="overlay")]
-
-
-def _filter_service_info(svc):
-    svc_attrs = svc.attrs.get('Spec')
-    service_tasks = svc.tasks()
-    service_task_status = list(
-        filter(
-            lambda tsk: tsk.get('Status').get('State') == 'running',
-            service_tasks
+    @staticmethod
+    def _filter_service_info(svc: services.Service) -> Dict:
+        svc_attrs = svc.attrs.get('Spec')
+        service_tasks = svc.tasks()
+        service_running_tasks = list(
+            filter(
+                lambda tsk: tsk.get('Status').get('State') == 'running',
+                service_tasks
+            )
         )
-    )
-    return dict(
-        name=svc_attrs.get('Name'),
-        status='{0}/{1}'.format(
-            len(service_task_status),
-            svc_attrs.get('Mode').get('Replicated').get('Replicas')
+        return dict(
+            name=svc_attrs.get('Name'),
+            status='{0}/{1}'.format(
+                len(service_running_tasks),
+                svc_attrs.get('Mode').get('Replicated').get('Replicas')
+            )
         )
-    )
 
-
-def _get_stack_services(stack_name: str,
-                        client: DockerClient) -> List[services.Service]:
-    service_list = client.services.list(filters={'name': stack_name})
-
-    stack_service_ids = list(map(
-        lambda obj: _check_component_labels(obj.attrs, stack_name),
-        service_list
-    ))
-    stack_services = list(
-        map(lambda svc_id: client.services.get(svc_id), stack_service_ids)
-    )
-    return stack_services
-
-
-def _get_stack_networks(stack_name: str,
-                        client: DockerClient) -> List[networks.Network]:
-    stack_networks = list()
-    network_list = client.networks.list(names=[stack_name])
-
-    stack_network_ids = list(map(
-        lambda obj: _check_component_labels(obj.attrs, stack_name),
-        network_list
-    ))
-
-    for network in stack_network_ids:
-        stack_networks.append(client.networks.get(network))
-    return stack_networks
-
-
-def _check_component_labels(obj: Dict, stack_name: str):
-    # Containers and networks have slightly different structures
-    # reassigning 'Spec' to obj will enable to retrieve labels for both objects
-    obj_id = obj.get('ID') if obj.get('ID') else obj.get('Id')
-    if obj.get('Spec'):
-        obj = obj.get('Spec')
-    if obj.get('Labels').get('com.docker.stack.namespace') and \
-            obj.get('Labels').get('com.docker.stack.namespace') == stack_name:
-        return obj_id
+    def _get_stack_networks(self) -> Iterable[networks.Network]:
+        filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
+        return self.client.networks.list(filters={'label': filter_lbl})

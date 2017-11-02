@@ -15,8 +15,6 @@
 #
 # AUTHOR: Bruno Grazioli
 
-from.exceptions import VolumeNotFound
-
 VOLUME_KEYS = [
     "driver",
     "driver_opts",
@@ -29,7 +27,6 @@ class Volume(object):
     def __init__(
             self,
             name,
-            client,
             stack_name=None,
             driver=None,
             driver_opts=None,
@@ -37,7 +34,6 @@ class Volume(object):
             labels=None
     ):
         self.name = name
-        self.client = client
         self.stack_name = stack_name
         self.driver = driver
         self.driver_opts = driver_opts
@@ -48,21 +44,15 @@ class Volume(object):
     def __repr__(self):
         return "<Volume: {}>".format(self.name)
 
-    def create(self) -> None:
-        self.client.volumes.create(name=self.name,
-                                   driver=self.driver,
-                                   driver_opts=self.driver_opts,
-                                   labels=self.labels)
+    def create(self, client) -> None:
+        if not self.external:
+            client.volumes.create(name=self.name,
+                                  driver=self.driver,
+                                  driver_opts=self.driver_opts,
+                                  labels=self.labels)
 
-    def _initialize_volume(self):
-        if self.external:
-            self._check_external_volume()
-
+    def _initialize_volume(self) -> None:
         if self.stack_name:
             if not self.external:
-                self.name = self.stack_name + "_" + self.name
+                self.name = '{0}_{1}'.format(self.stack_name, self.name)
             self.labels.update({"com.docker.stack.namespace": self.stack_name})
-
-    def _check_external_volume(self):
-        if not self.client.volumes.list(names=[self.name]):
-            raise VolumeNotFound("External network not found.")

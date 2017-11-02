@@ -18,7 +18,6 @@
 import unittest
 
 from .fake_api import MockDockerAPI
-from swarm.exceptions import VolumeNotFound
 from swarm.volume import Volume
 
 
@@ -31,21 +30,7 @@ class VolumeTest(unittest.TestCase):
 
     def test_volume_with_stack_name(self):
         vol = Volume(name=self.vol_name,
-                     client=self.fake_client,
                      stack_name=self.stack_name)
         self.assertEquals(vol.name, '{0}_{1}'.format(self.stack_name,
                                                      self.vol_name))
         self.assertDictEqual(vol.labels, self.stack_label)
-
-    def test_volume_external_raises_exception(self):
-        name = "tst"
-        with self.assertRaises(VolumeNotFound):
-            Volume(name=name,
-                   client=self.fake_client,
-                   external=True)
-
-    def test_volume_external(self):
-        name = "test"
-        Volume(name=name,
-               client=self.fake_client,
-               external=True)

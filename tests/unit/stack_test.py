@@ -20,7 +20,7 @@ import unittest
 from .fake_compose_file import COMPOSE_WITHOUT_NETWORK_AND_VOLUMES, \
     COMPOSE_WITH_NETWORK_AND_VOLUMES
 from .fake_api import MockDockerAPI
-from swarm import stack
+from swarm.stack import Stack
 from swarm.service import Service
 from swarm.network import Network
 from swarm.volume import Volume
@@ -34,9 +34,10 @@ class StackTest(unittest.TestCase):
 
     def test_create_stack_without_volumes_and_networks(self):
         compose = COMPOSE_WITHOUT_NETWORK_AND_VOLUMES
-        svcs, nets, vols = stack.create_stack(stack_name=self.stack_name,
-                                              compose_file=compose,
-                                              client=self.fake_client)
+        stack = Stack(stack_name=self.stack_name,
+                      compose_file=compose,
+                      client=self.fake_client)
+        svcs, nets, vols = stack.create()
         self.assertIsInstance(svcs, list)
         for svc in svcs:
             self.assertIsInstance(svc, Service)
@@ -52,9 +53,10 @@ class StackTest(unittest.TestCase):
 
     def test_create_stack_with_volumes_and_networks(self):
         compose = COMPOSE_WITH_NETWORK_AND_VOLUMES
-        svcs, nets, vols = stack.create_stack(stack_name=self.stack_name,
-                                              compose_file=compose,
-                                              client=self.fake_client)
+        stack = Stack(stack_name=self.stack_name,
+                      compose_file=compose,
+                      client=self.fake_client)
+        svcs, nets, vols = stack.create()
         self.assertIsInstance(svcs, list)
         for svc in svcs:
             self.assertIsInstance(svc, Service)
@@ -63,7 +65,7 @@ class StackTest(unittest.TestCase):
         self.assertIsInstance(nets, list)
         for net in nets:
             self.assertIsInstance(net, Network)
-            self.assertEquals(net.name, 'stack_backend')
+            self.assertIn(net.name, ['stack_backend', 'stack_default'])
         self.assertIsInstance(vols, list)
         for vol in vols:
             self.assertIsInstance(vol, Volume)

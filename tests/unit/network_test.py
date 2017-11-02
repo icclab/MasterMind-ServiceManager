@@ -18,7 +18,6 @@
 import unittest
 
 from .fake_api import MockDockerAPI
-from swarm.exceptions import NetworkNotFound
 from swarm.network import Network
 
 
@@ -31,7 +30,6 @@ class NetworkTest(unittest.TestCase):
 
     def test_network_with_stack_name(self):
         net = Network(name=self.net_name,
-                      client=self.fake_client,
                       stack_name=self.stack_name)
         self.assertEquals(net.name, '{0}_{1}'.format(self.stack_name,
                                                      self.net_name))
@@ -40,27 +38,12 @@ class NetworkTest(unittest.TestCase):
     def test_network_labels_dict(self):
         labels = {'test': 'driver'}
         net = Network(name=self.net_name,
-                      client=self.fake_client,
                       labels=labels)
         self.assertEquals(net.labels, labels)
 
     def test_network_labels_list(self):
         labels = ['test=driver']
         net = Network(name=self.net_name,
-                      client=self.fake_client,
                       labels=labels)
         lbls = {'test': 'driver'}
         self.assertEquals(net.labels, lbls)
-
-    def test_network_external_raises_exception(self):
-        name = "dft"
-        with self.assertRaises(NetworkNotFound):
-            Network(name=name,
-                    client=self.fake_client,
-                    external=True)
-
-    def test_network_external(self):
-        name = "default"
-        Network(name=name,
-                client=self.fake_client,
-                external=True)

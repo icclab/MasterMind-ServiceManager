@@ -15,11 +15,11 @@
 #
 # AUTHOR: Bruno Grazioli
 
+from docker import DockerClient
 from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
-from typing import List, Dict
+from typing import List, Dict, Text
 
-from .network import Network
 
 UPDATE_CONFIG_KEYS = [
     'parallelism',
@@ -36,6 +36,14 @@ RESTART_POLICY_KEYS = [
     'window'
 ]
 
+SECRET_KEYS = [
+    'source',
+    'target',
+    'uid',
+    'gid',
+    'mode'
+]
+
 
 class Modes(object):
     """Enumeration for the types of service modes known to compose."""
@@ -47,7 +55,6 @@ class Service(object):
     def __init__(
             self,
             name,
-            client,
             image=None,
             command=None,
             entrypoint=None,
@@ -60,13 +67,13 @@ class Service(object):
             networks=None,
             deploy=None,
             ports=None,
+            secrets=None,
             stack_name=None,
             stop_grace_period=None,
             user=None,
             workdir=None
     ):
         self.command = command
-        self.client = client
         self.deploy = deploy
         self.entrypoint = entrypoint
         self.environment = environment
@@ -77,15 +84,16 @@ class Service(object):
         self.name = name
         self.networks = networks or []
         self.ports = ports
+        self.secrets = secrets
         self.stack_name = stack_name or ''
         self.stop_grace_period = stop_grace_period
         self.user = user
         self.volumes = volumes
         self.workdir = workdir
 
-        self.container_labels = dict()
+        self.container_labels = {}
         self.endpoint_spec = None
-        self.service_labels = dict()
+        self.service_labels = {}
         self.log_driver = None
         self.log_driver_options = None
         self.mode = None
@@ -98,37 +106,37 @@ class Service(object):
     def __repr__(self):
         return "<Service: {}>".format(self.name)
 
-    def create(self):
-        self.client.services.create(self.image,
-                                    command=self.entrypoint,
-                                    args=self.command,
-                                    # constraints=self.constraints,
-                                    container_labels=self.container_labels,
-                                    endpoint_spec=self.endpoint_spec,
-                                    env=self.environment,
-                                    hostname=self.hostname,
-                                    labels=self.service_labels,
-                                    log_driver=self.log_driver,
-                                    log_driver_options=self.log_driver_options,
-                                    mode=self.mode,
-                                    name=self.name,
-                                    networks=self.network_attachments,
-                                    restart_policy=self.restart_policy,
-                                    stop_grace_period=self.stop_grace_period,
-                                    update_config=self.update_config,
-                                    user=self.user,
-                                    workdir=self.workdir)
+    def create(self, client: DockerClient):
+        client.services.create(self.image,
+                               command=self.entrypoint,
+                               args=self.command,
+                               # constraints=self.constraints,
+                               container_labels=self.container_labels,
+                               endpoint_spec=self.endpoint_spec,
+                               env=self.environment,
+                               hostname=self.hostname,
+                               labels=self.service_labels,
+                               log_driver=self.log_driver,
+                               log_driver_options=self.log_driver_options,
+                               mode=self.mode,
+                               name=self.name,
+                               networks=self.network_attachments,
+                               restart_policy=self.restart_policy,
+                               stop_grace_period=self.stop_grace_period,
+                               update_config=self.update_config,
+                               user=self.user,
+                               workdir=self.workdir)
 
     def _initialize_service(self):
-        docker_stack_label = {'com.docker.stack.namespace': self.stack_name}
         self._check_network_exists()
         if self.ports:
             self._service_endpoint_specs(self.ports)
 
         if self.stack_name:
-            self.service_labels.update(docker_stack_label)
-            self.container_labels.update(docker_stack_label)
-            self.name = self.stack_name + "_" + self.name
+            stack_label = {'com.docker.stack.namespace': self.stack_name}
+            self.service_labels.update(stack_label)
+            self.container_labels.update(stack_label)
+            self.name = '{0}_{1}'.format(self.stack_name, self.name)
 
         if self.deploy:
             if self.deploy.get('labels'):
@@ -139,41 +147,22 @@ class Service(object):
                 self._service_update_config(self.deploy.get('update_config'))
             if self.deploy.get('mode') or self.deploy.get('replicas'):
                 self._service_mode(self.deploy)
-        if self.command and isinstance(self.command, str):
+        if self.command and isinstance(self.command, Text):
             self.command = self.command.split()
+        if self.secrets:
+            pass
 
     def _check_network_exists(self):
-        def check_service_network_exists(network: str):
-            prefix = self.stack_name + "_"
-            if prefix + network in list(map(
-                    lambda netw: netw.name,
-                    self.client.networks.list(names=[network])
-            )):
-                return prefix + network
-            else:
-                return network
-        if self.networks:
-            networks = list(map(check_service_network_exists, self.networks))
+        if self.networks and isinstance(self.networks, list):
             self.network_attachments = list(map(
                 lambda nt: NetworkAttachment(network=nt, aliases=[self.name]),
-                networks
+                self.networks
             ))
         else:
-            self._check_default_network_exists()
-
-    def _check_default_network_exists(self):
-        default_net = '{0}_{1}'.format(self.stack_name, 'default')
-        net = self.client.networks.list(names=[default_net])
-        if not net:
-            self._create_default_network()
-        self.network_attachments = [
-            NetworkAttachment(network=default_net, aliases=[self.name])
-        ]
-
-    def _create_default_network(self):
-        net = Network('default', self.client,
-                      stack_name=self.stack_name, driver="overlay")
-        net.create()
+            default_net = '{0}_{1}'.format(self.stack_name, 'default')
+            self.network_attachments = [
+                NetworkAttachment(network=default_net, aliases=[self.name])
+            ]
 
     def _service_endpoint_specs(self, ports: List[str]) -> None:
         ports_dict = dict()

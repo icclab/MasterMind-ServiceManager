@@ -15,7 +15,7 @@
 #
 # AUTHOR: Bruno Grazioli
 
-from .exceptions import NetworkNotFound
+from docker import DockerClient
 
 IPAM_CONFIG_KEYS = [
     'driver',
@@ -35,7 +35,6 @@ class Network(object):
     def __init__(
             self,
             name,
-            client,
             stack_name=None,
             driver=None,
             external=False,
@@ -47,7 +46,6 @@ class Network(object):
             enable_ipv6=False,
     ):
         self.name = name
-        self.client = client
         self.stack_name = stack_name
         self.driver = driver
         self.external = external
@@ -63,24 +61,21 @@ class Network(object):
     def __repr__(self):
         return "<Network: {}>".format(self.name)
 
-    def create(self):
-        if not self.external:
-            self.client.networks.create(name=self.name,
-                                        driver=self.driver,
-                                        options=self.driver_options,
-                                        ipam=self.ipam,
-                                        check_duplicate=self.check_duplicate,
-                                        internal=self.internal,
-                                        labels=self.labels)
+    def create(self, client: DockerClient):
+        client.networks.create(name=self.name,
+                               driver=self.driver,
+                               options=self.driver_options,
+                               ipam=self.ipam,
+                               check_duplicate=self.check_duplicate,
+                               internal=self.internal,
+                               labels=self.labels)
 
     def _initialize_network(self):
         self._network_labels()
-        if self.external:
-            self.check_external_network_exists()
 
         if self.stack_name:
             if not self.external:
-                self.name = self.stack_name + "_" + self.name
+                self.name = '{0}_{1}'.format(self.stack_name, self.name)
             self.labels.update({'com.docker.stack.namespace': self.stack_name})
 
     def _network_labels(self):
@@ -96,7 +91,3 @@ class Network(object):
             for lb in lbs:
                 label_dict.update(lb)
             self.labels = label_dict
-
-    def check_external_network_exists(self):
-        if not self.client.networks.list(names=[self.name]):
-            raise NetworkNotFound("External network not found.")

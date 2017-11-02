@@ -32,7 +32,6 @@ class ServiceTest(unittest.TestCase):
 
     def test_service_with_stack_name(self):
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       stack_name=self.stack_name)
         self.assertEquals(svc.name, '{0}_{1}'.format(self.stack_name,
                                                      self.svc_name))
@@ -42,7 +41,6 @@ class ServiceTest(unittest.TestCase):
     def test_service_ports(self):
         ports = ['8080:8080']
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       ports=ports)
         endpoint_spec = EndpointSpec(ports={8080: 8080})
         self.assertEquals(svc.endpoint_spec, endpoint_spec)
@@ -50,7 +48,6 @@ class ServiceTest(unittest.TestCase):
     def test_service_replicas(self):
         replicas = {'replicas': 3}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=replicas)
         svc_mode = ServiceMode('replicated', 3)
         self.assertEquals(svc.mode, svc_mode)
@@ -58,7 +55,6 @@ class ServiceTest(unittest.TestCase):
     def test_service_global_mode(self):
         mode = {'mode': 'global'}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=mode)
         svc_mode = ServiceMode('global')
         self.assertEquals(svc.mode, svc_mode)
@@ -66,7 +62,6 @@ class ServiceTest(unittest.TestCase):
     def test_service_labels_with_stack_name(self):
         labels = {'labels': {'test': 'driver'}}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=labels,
                       stack_name=self.stack_name)
         svc_labels = {}
@@ -82,7 +77,6 @@ class ServiceTest(unittest.TestCase):
                                            'failure_action': 'continue',
                                            'max_failure_ratio': 0.1}}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=update_config)
         updt_config = UpdateConfig(parallelism=2, delay=3, monitor=5000,
                                    failure_action='continue',
@@ -96,7 +90,6 @@ class ServiceTest(unittest.TestCase):
                                              'max_attempts': 5,
                                              'window': 0}}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=restart_policy)
         rest_config = RestartPolicy(condition='none', delay=3, max_attempts=5,
                                     window=0)
@@ -110,7 +103,6 @@ class ServiceTest(unittest.TestCase):
                                              'window': 0,
                                              'test': 'unused_parameter'}}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       deploy=restart_policy)
         rest_config = RestartPolicy(condition='none', delay=3, max_attempts=5,
                                     window=0)
@@ -120,14 +112,12 @@ class ServiceTest(unittest.TestCase):
     def test_service_container_labels_dict(self):
         labels = {'test': 'driver'}
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       labels=labels)
         self.assertEquals(svc.container_labels, labels)
 
     def test_service_container_labels_list(self):
         labels = ['test=driver']
         svc = Service(name=self.svc_name,
-                      client=self.fake_client,
                       labels=labels)
         lbls = {'test': 'driver'}
         self.assertEquals(svc.container_labels, lbls)
