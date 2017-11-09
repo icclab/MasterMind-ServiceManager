@@ -66,6 +66,8 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
 
         compose = parse_compose_file(stack.compose_file,
                                      stack.compose_vars)
+
+        create_secrets_and_configs(cli, compose, stack.external_files)
         stack_obj = StackCls(stack_name=stack.name, compose_file=compose,
                              client=cli)
         service_list = stack_obj.create()
@@ -119,7 +121,7 @@ def get_client(engine_url: str, tls: Dict=None):
             verify=tls['ca_cert'].name
         )
     return docker.DockerClient(base_url=engine_url,
-                               version="1.26",
+                               version="1.30",
                                tls=tls_config)
 
 
@@ -160,6 +162,33 @@ def close_temp_files(temp_files: Dict) -> None:
     os.remove(temp_files['cert'].name)
     os.remove(temp_files['key'].name)
     os.rmdir(temp_files['directory_name'])
+
+
+def create_secrets_and_configs(client, compose, external_files) -> None:
+    secrets = compose.get('secrets') or {}
+    configs = compose.get('configs') or {}
+
+    if external_files:
+        for ext_file in external_files:
+            for file_name, file_attrs in ext_file.items():
+                for secret_name, secret_attrs in secrets.items():
+                    if file_name in secret_attrs.get('file'):
+                        label = 'mastermind.namespace={0}'.format(secret_name)
+                        if not client.secrets.list(filters={'label': label}):
+                            lbl = {'mastermind.namespace': secret_name}
+                            client.secrets.create(name=secret_name,
+                                                  data=file_attrs,
+                                                  labels=lbl)
+                        break
+                for config_name, config_attrs in configs.items():
+                    if file_name in config_attrs.get('file'):
+                        label = 'mastermind.namespace={0}'.format(config_name)
+                        if not client.configs.list(filters={'label': label}):
+                            lbl = {'mastermind.namespace': config_name}
+                            client.configs.create(name=config_name,
+                                                  data=file_attrs,
+                                                  labels=lbl)
+                        break
 
 
 def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:

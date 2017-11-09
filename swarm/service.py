@@ -18,31 +18,12 @@
 from docker import DockerClient
 from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
+from docker.types.healthcheck import Healthcheck
 from typing import List, Dict, Text
 
+from .utils import convert_time_to_secs
 
-UPDATE_CONFIG_KEYS = [
-    'parallelism',
-    'delay',
-    'failure_action',
-    'monitor',
-    'max_failure_ratio'
-]
-
-RESTART_POLICY_KEYS = [
-    'condition',
-    'delay',
-    'max_attempts',
-    'window'
-]
-
-SECRET_KEYS = [
-    'source',
-    'target',
-    'uid',
-    'gid',
-    'mode'
-]
+SECS_TO_NANOSECS = 1000000000
 
 
 class Modes(object):
@@ -57,8 +38,10 @@ class Service(object):
             name,
             image=None,
             command=None,
+            configs=None,
             entrypoint=None,
             environment=None,
+            healthcheck=None,
             hostname=None,
             labels=None,
             links=None,
@@ -74,9 +57,11 @@ class Service(object):
             workdir=None
     ):
         self.command = command
+        self.configs = configs
         self.deploy = deploy
         self.entrypoint = entrypoint
         self.environment = environment
+        self.healthcheck = healthcheck
         self.hostname = hostname
         self.links = links
         self.logging = logging
@@ -111,9 +96,11 @@ class Service(object):
                                command=self.entrypoint,
                                args=self.command,
                                # constraints=self.constraints,
+                               configs=self.configs,
                                container_labels=self.container_labels,
                                endpoint_spec=self.endpoint_spec,
                                env=self.environment,
+                               healthcheck=self.healthcheck,
                                hostname=self.hostname,
                                labels=self.service_labels,
                                log_driver=self.log_driver,
@@ -122,13 +109,14 @@ class Service(object):
                                name=self.name,
                                networks=self.network_attachments,
                                restart_policy=self.restart_policy,
+                               secrets=self.secrets,
                                stop_grace_period=self.stop_grace_period,
                                update_config=self.update_config,
                                user=self.user,
                                workdir=self.workdir)
 
     def _initialize_service(self):
-        self._check_network_exists()
+        self._service_networks()
         if self.ports:
             self._service_endpoint_specs(self.ports)
 
@@ -149,10 +137,10 @@ class Service(object):
                 self._service_mode(self.deploy)
         if self.command and isinstance(self.command, Text):
             self.command = self.command.split()
-        if self.secrets:
-            pass
+        if self.healthcheck:
+            self._service_healthcheck()
 
-    def _check_network_exists(self):
+    def _service_networks(self):
         if self.networks and isinstance(self.networks, list):
             self.network_attachments = list(map(
                 lambda nt: NetworkAttachment(network=nt, aliases=[self.name]),
@@ -177,13 +165,24 @@ class Service(object):
             if svc_mode != Modes.GLOBAL else None
         self.mode = ServiceMode(mode=svc_mode, replicas=svc_replicas)
 
-    def _service_update_config(self, update_config_dict: Dict) -> None:
-        check_dict_keys(update_config_dict, UPDATE_CONFIG_KEYS)
-        self.update_config = UpdateConfig(**update_config_dict)
+    def _service_update_config(self, update_cfg_dict: Dict) -> None:
+        self.update_config = UpdateConfig(
+            parallelism=update_cfg_dict.get('parallelism') or 0,
+            delay=convert_time_to_secs(update_cfg_dict.get('delay')) or None,
+            failure_action=update_cfg_dict.get('failure_action') or 'continue',
+            monitor=convert_time_to_secs(
+                update_cfg_dict.get('monitor')
+            )*SECS_TO_NANOSECS or None,
+            max_failure_ratio=update_cfg_dict.get('max_failure_ratio') or None
+        )
 
     def _service_restart_policy(self, restart_policy_dict: Dict) -> None:
-        check_dict_keys(restart_policy_dict, RESTART_POLICY_KEYS)
-        self.restart_policy = RestartPolicy(**restart_policy_dict)
+        self.restart_policy = RestartPolicy(
+            condition=restart_policy_dict.get('condition') or 'none',
+            delay=convert_time_to_secs(restart_policy_dict.get('delay')) or 0,
+            max_attempts=restart_policy_dict.get('max_attempts') or 0,
+            window=convert_time_to_secs(restart_policy_dict.get('window')) or 0
+        )
 
     def _service_container_labels(self, labels) -> None:
         if isinstance(labels, dict):
@@ -204,7 +203,18 @@ class Service(object):
     def _service_labels(self, labels):
         self.service_labels.update(labels)
 
-
-def check_dict_keys(dictionary: Dict, valid_keys: List[str]) -> None:
-    dikt = dictionary.copy()
-    [dictionary.pop(key) for key in dikt.keys() if key not in valid_keys]
+    def _service_healthcheck(self):
+        healthcheck = self.healthcheck.copy()
+        self.healthcheck = Healthcheck(
+            test=healthcheck.get('test'),
+            interval=convert_time_to_secs(
+                healthcheck.get('interval')
+            )*SECS_TO_NANOSECS or 0,
+            timeout=convert_time_to_secs(
+                healthcheck.get('timeout')
+            )*SECS_TO_NANOSECS or 0,
+            retries=healthcheck.get('retries'),
+            start_period=convert_time_to_secs(
+                healthcheck.get('start_period')
+            )*SECS_TO_NANOSECS or 0
+        )

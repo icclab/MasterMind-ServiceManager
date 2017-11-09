@@ -19,8 +19,10 @@ from __future__ import absolute_import
 from typing import Dict, Union, Tuple, List, Iterable
 from docker import DockerClient
 from docker.models import services, networks
+from docker.types.services import SecretReference, ConfigReference
 
-from .exceptions import NetworkNotFound, VolumeNotFound
+from .exceptions import NetworkNotFound, VolumeNotFound, SecretNotFound, \
+    ConfigNotFound
 from .network import Network
 from .service import Service
 from .volume import Volume
@@ -72,13 +74,13 @@ class Stack(object):
         return svcs
 
     def _create_networks(self) -> None:
-        def check_if_network_is_external(dictionary: Dict):
-            net_name, net_attrs = dictionary
+        def check_if_network_is_external(net_tuple: Tuple):
+            net_name, net_attrs = net_tuple
             if not net_attrs:
                 net_attrs = {}
             if not net_attrs.get('external'):
                 self.stack_networks.append(net_name)
-                return self._create_obj_from_dict(dictionary, Network)
+                return self._create_obj_from_tuple(net_tuple, Network)
             if not self.client.networks.list(names=[net_name]):
                 raise NetworkNotFound(
                             "External network {0} not found.".format(net_name)
@@ -100,12 +102,12 @@ class Stack(object):
         self.networks.append(default_net)
 
     def _create_volumes(self) -> None:
-        def check_if_volume_is_external(dictionary: Dict):
-            vol_name, vol_attrs = dictionary
+        def check_if_volume_is_external(vol_tuple: Tuple):
+            vol_name, vol_attrs = vol_tuple
             if not vol_attrs:
                 vol_attrs = {}
             if not vol_attrs.get('external'):
-                return self._create_obj_from_dict(dictionary, Volume)
+                return self._create_obj_from_tuple(vol_tuple, Volume)
             if not self.client.volumes.list(names=[vol_name]):
                 raise VolumeNotFound(
                     "External volume {0} not found.".format(vol_name)
@@ -122,7 +124,7 @@ class Stack(object):
     def _create_services(self) -> None:
         self._check_stack_service_attributes()
         self.services = list(map(
-            lambda sc: self._create_obj_from_dict(sc, Service),
+            lambda sc: self._create_obj_from_tuple(sc, Service),
             self.service_dict.items()
         ))
         for svc in self.services:
@@ -131,24 +133,80 @@ class Stack(object):
 
     def _check_stack_service_attributes(self) -> None:
         for svc_name, svc_attrs in self.service_dict.items():
-            self._check_stack_service_networks(svc_attrs.get('networks') or [])
+            self._parse_stack_service_networks(svc_attrs.get('networks') or [])
+            self._parse_stack_service_secrets(svc_attrs.get('secrets') or [])
+            self._parse_stack_service_configs(svc_attrs.get('configs') or [])
 
-    def _check_stack_service_networks(self, attrs: Union[List, Dict]) -> None:
-        if isinstance(attrs, list):
-            nets = attrs
-            for net in nets:
+    def _parse_stack_service_networks(self, nets: Union[List, Dict]) -> None:
+        if isinstance(nets, list):
+            nets_copy = nets.copy()
+            for net in nets_copy:
                 if net in self.stack_networks:
                     nets[nets.index(net)] = '{0}_{1}'.format(
                         self.stack_name, net
                     )
-            else:
+            if not nets:
                 if not self.default_network_created:
                     self._create_default_network()
                     self.default_network_created = True
 
-    def _create_obj_from_dict(self, dictionary: Dict,
-                              obj_class) -> Union[Service, Network, Volume]:
-        obj_name, obj_attrs = dictionary
+    def _parse_stack_service_secrets(self, secrets: List) -> None:
+        def get_secret_id(scrt_name: str):
+            scrt = self.client.secrets.list(filters={'names': scrt_name})
+            if not scrt:
+                raise SecretNotFound('Secret {0} not found'.format(scrt_name))
+            if len(scrt) == 1:
+                return scrt[0].id
+
+        secrets_copy = secrets.copy()
+        for secret in secrets_copy:
+            if isinstance(secret, str):
+                secret_id = get_secret_id(secret)
+                secrets[secrets.index(secret)] = SecretReference(
+                    secret_id=secret_id,
+                    secret_name=secret
+                )
+            elif isinstance(secret, dict):
+                secret_id = get_secret_id(secret.get('source'))
+                secrets[secrets.index(secret)] = SecretReference(
+                    secret_id=secret_id,
+                    secret_name=secret.get('source'),
+                    filename=secret.get('target'),
+                    uid=secret.get('uid') or 0,
+                    gid=secret.get('gid') or 0,
+                    mode=secret.get('mode') or 0o444
+                )
+
+    def _parse_stack_service_configs(self, configs: List) -> None:
+        def get_config_id(cnfg_name: str):
+            cnfg = self.client.configs.list(filters={'names': cnfg_name})
+            if not cnfg:
+                raise ConfigNotFound('Config {0} not found'.format(cnfg_name))
+            if len(cnfg) == 1:
+                return cnfg[0].id
+
+        configs_copy = configs.copy()
+        for config in configs_copy:
+            if isinstance(config, str):
+                config_id = get_config_id(config)
+                configs[configs.index(config)] = ConfigReference(
+                    config_id=config_id,
+                    config_name=config
+                )
+            elif isinstance(config, dict):
+                config_id = get_config_id(config.get('source'))
+                configs[configs.index(config)] = ConfigReference(
+                    config_id=config_id,
+                    config_name=config.get('source'),
+                    filename=config.get('target'),
+                    uid=config.get('uid') or 0,
+                    gid=config.get('gid') or 0,
+                    mode=config.get('mode') or 0o444
+                )
+
+    def _create_obj_from_tuple(self, dict_tuple: Tuple,
+                               obj_class) -> Union[Service, Network, Volume]:
+        obj_name, obj_attrs = dict_tuple
         if not obj_attrs:
             obj_attrs = {}
         return obj_class(obj_name, stack_name=self.stack_name, **obj_attrs)

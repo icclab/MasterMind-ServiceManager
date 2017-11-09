@@ -72,13 +72,13 @@ class ServiceTest(unittest.TestCase):
 
     def test_service_update_config(self):
         update_config = {'update_config': {'parallelism': 2,
-                                           'delay': 3,
-                                           'monitor': 5000,
+                                           'delay': '3s',
+                                           'monitor': '5s',
                                            'failure_action': 'continue',
                                            'max_failure_ratio': 0.1}}
         svc = Service(name=self.svc_name,
                       deploy=update_config)
-        updt_config = UpdateConfig(parallelism=2, delay=3, monitor=5000,
+        updt_config = UpdateConfig(parallelism=2, delay=3, monitor=5000000000,
                                    failure_action='continue',
                                    max_failure_ratio=0.1)
 
@@ -86,7 +86,7 @@ class ServiceTest(unittest.TestCase):
 
     def test_service_restart_policy(self):
         restart_policy = {'restart_policy': {'condition': 'none',
-                                             'delay': 3,
+                                             'delay': '3s',
                                              'max_attempts': 5,
                                              'window': 0}}
         svc = Service(name=self.svc_name,
@@ -98,9 +98,8 @@ class ServiceTest(unittest.TestCase):
 
     def test_service_restart_policy_with_additional_parameters(self):
         restart_policy = {'restart_policy': {'condition': 'none',
-                                             'delay': 3,
+                                             'delay': '3s',
                                              'max_attempts': 5,
-                                             'window': 0,
                                              'test': 'unused_parameter'}}
         svc = Service(name=self.svc_name,
                       deploy=restart_policy)

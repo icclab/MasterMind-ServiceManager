@@ -1,4 +1,4 @@
 connexion
 pyyaml
 Jinja2
--e git+https://github.com/padyx/docker-py.git@e7739da18f3cf7765ce4708995417b6cd73e9712#egg=docker
+-e git+https://github.com/icclab/docker-py.git@695cd770ec4c98070493fa563eb7b298b2f913e2#egg=docker

@@ -137,6 +137,11 @@ definitions:
         type: "string"
       cert-key:
         type: "string"
+      external_files:
+        type: "array"
+        items:
+          type: "object"
+          properties: {}
   Swarm:
     type: "object"
     required:

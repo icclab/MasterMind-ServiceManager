@@ -42,3 +42,7 @@ class SecretNotFound(StackError):
 
 class InvalidFormat(StackError):
     pass
+
+
+class ConfigNotFound(StackError):
+    pass
