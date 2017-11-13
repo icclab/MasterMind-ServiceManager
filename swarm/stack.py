@@ -108,7 +108,7 @@ class Stack(object):
                 vol_attrs = {}
             if not vol_attrs.get('external'):
                 return self._create_obj_from_tuple(vol_tuple, Volume)
-            if not self.client.volumes.list(names=[vol_name]):
+            if not self.client.volumes.list(filters={'name': vol_name}):
                 raise VolumeNotFound(
                     "External volume {0} not found.".format(vol_name)
                 )

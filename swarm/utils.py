@@ -23,8 +23,10 @@ RE_CONVERT_TIME = r'^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+|\d+\.\d+)s)' \
                   r'?(?:(\d+)ms)?(?:(\d+)us)?$'
 regexp_time = re.compile(RE_CONVERT_TIME, re.ASCII | re.IGNORECASE)
 
+SECS_TO_NANOSECS = 1000000000
 
-def convert_time_string_to_secs(string: str):
+
+def convert_time_string_to_secs(string: str) -> int:
     match = regexp_time.match(string)
     if not match:
         raise ValueError("String {0} has an invalid representation")
@@ -36,8 +38,14 @@ def convert_time_string_to_secs(string: str):
     return total_time_seconds
 
 
-def convert_time_to_secs(pr: Union[Text, int]):
+def convert_time_to_secs(pr: Union[Text, int]) -> int:
     if isinstance(pr, Text):
         return convert_time_string_to_secs(pr)
     elif isinstance(pr, int):
         return pr
+
+
+def convert_time_to_nano_secs(pr: Union[Text, int]) -> int:
+    secs = convert_time_to_secs(pr)
+    if secs:
+        return secs * SECS_TO_NANOSECS

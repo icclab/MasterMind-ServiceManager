@@ -21,9 +21,7 @@ from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
 from docker.types.healthcheck import Healthcheck
 from typing import List, Dict, Text
 
-from .utils import convert_time_to_secs
-
-SECS_TO_NANOSECS = 1000000000
+from .utils import convert_time_to_secs, convert_time_to_nano_secs
 
 
 class Modes(object):
@@ -54,7 +52,8 @@ class Service(object):
             stack_name=None,
             stop_grace_period=None,
             user=None,
-            workdir=None
+            workdir=None,
+            **options
     ):
         self.command = command
         self.configs = configs
@@ -68,6 +67,7 @@ class Service(object):
         self.image = image
         self.name = name
         self.networks = networks or []
+        self.options = options
         self.ports = ports
         self.secrets = secrets
         self.stack_name = stack_name or ''
@@ -170,9 +170,9 @@ class Service(object):
             parallelism=update_cfg_dict.get('parallelism') or 0,
             delay=convert_time_to_secs(update_cfg_dict.get('delay')) or None,
             failure_action=update_cfg_dict.get('failure_action') or 'continue',
-            monitor=convert_time_to_secs(
+            monitor=convert_time_to_nano_secs(
                 update_cfg_dict.get('monitor')
-            )*SECS_TO_NANOSECS or None,
+            ) or None,
             max_failure_ratio=update_cfg_dict.get('max_failure_ratio') or None
         )
 
@@ -207,14 +207,14 @@ class Service(object):
         healthcheck = self.healthcheck.copy()
         self.healthcheck = Healthcheck(
             test=healthcheck.get('test'),
-            interval=convert_time_to_secs(
+            interval=convert_time_to_nano_secs(
                 healthcheck.get('interval')
-            )*SECS_TO_NANOSECS or 0,
-            timeout=convert_time_to_secs(
+            ) or 0,
+            timeout=convert_time_to_nano_secs(
                 healthcheck.get('timeout')
-            )*SECS_TO_NANOSECS or 0,
+            ) or 0,
             retries=healthcheck.get('retries'),
-            start_period=convert_time_to_secs(
+            start_period=convert_time_to_nano_secs(
                 healthcheck.get('start_period')
-            )*SECS_TO_NANOSECS or 0
+            ) or 0
         )

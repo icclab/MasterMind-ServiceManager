@@ -179,7 +179,6 @@ def create_secrets_and_configs(client, compose, external_files) -> None:
                             client.secrets.create(name=secret_name,
                                                   data=file_attrs,
                                                   labels=lbl)
-                        break
                 for config_name, config_attrs in configs.items():
                     if file_name in config_attrs.get('file'):
                         label = 'mastermind.namespace={0}'.format(config_name)
@@ -188,7 +187,6 @@ def create_secrets_and_configs(client, compose, external_files) -> None:
                             client.configs.create(name=config_name,
                                                   data=file_attrs,
                                                   labels=lbl)
-                        break
 
 
 def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:

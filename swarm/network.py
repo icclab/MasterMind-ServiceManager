@@ -39,22 +39,24 @@ class Network(object):
             driver=None,
             external=False,
             check_duplicate=True,
-            driver_options=None,
+            driver_opts=None,
             ipam=None,
             internal=False,
             labels=None,
             enable_ipv6=False,
+            **options
     ):
         self.name = name
         self.stack_name = stack_name
         self.driver = driver
         self.external = external
-        self.driver_options = driver_options
+        self.driver_options = driver_opts
         self.ipam = ipam
         self.check_duplicate = check_duplicate
         self.internal = internal
         self.labels = labels or {}
         self.enable_ipv6 = enable_ipv6
+        self.options = options
 
         self._initialize_network()
 
@@ -77,6 +79,10 @@ class Network(object):
             if not self.external:
                 self.name = '{0}_{1}'.format(self.stack_name, self.name)
             self.labels.update({'com.docker.stack.namespace': self.stack_name})
+        if self.driver_options:
+            opts = self.driver_options.copy()
+            for key, value in opts.items():
+                self.driver_options[key] = str(value)
 
     def _network_labels(self):
         if isinstance(self.labels, list):
