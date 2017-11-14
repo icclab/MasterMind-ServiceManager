@@ -106,6 +106,7 @@ class Service(object):
                                log_driver=self.log_driver,
                                log_driver_options=self.log_driver_options,
                                mode=self.mode,
+                               mounts=self.volumes,
                                name=self.name,
                                networks=self.network_attachments,
                                restart_policy=self.restart_policy,
@@ -139,6 +140,8 @@ class Service(object):
             self.command = self.command.split()
         if self.healthcheck:
             self._service_healthcheck()
+        if self.volumes:
+            self._service_volumes()
 
     def _service_networks(self):
         if self.networks and isinstance(self.networks, list):
@@ -218,3 +221,14 @@ class Service(object):
                 healthcheck.get('start_period')
             ) or 0
         )
+
+    def _service_volumes(self):
+        if isinstance(self.volumes, list):
+            volumes = self.volumes.copy()
+            for volume in volumes:
+                volume_str_list = volume.split(':')
+                if len(volume_str_list) == 1:
+                    self.volumes[self.volumes.index(volume)] = \
+                        '{0}:{1}:{2}'.format(volume, volume, ':rw')
+                elif len(volume_str_list) == 2:
+                    self.volumes[self.volumes.index(volume)] = volume + ':rw'
