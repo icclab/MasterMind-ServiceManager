@@ -31,6 +31,11 @@ class Modes(object):
 
 
 class Service(object):
+    """
+    This class is only used for creating services in a Stack.
+    Each services defined in the compose-file are passed to this class as
+    a dictionary which is then processed in order to match the docker-py lib.
+    """
     def __init__(
             self,
             name,
@@ -42,7 +47,6 @@ class Service(object):
             healthcheck=None,
             hostname=None,
             labels=None,
-            links=None,
             logging=None,
             volumes=None,
             networks=None,
@@ -62,7 +66,6 @@ class Service(object):
         self.environment = environment
         self.healthcheck = healthcheck
         self.hostname = hostname
-        self.links = links
         self.logging = logging
         self.image = image
         self.name = name
@@ -77,6 +80,7 @@ class Service(object):
         self.workdir = workdir
 
         self.container_labels = {}
+        self.constraints = None
         self.endpoint_spec = None
         self.service_labels = {}
         self.log_driver = None
@@ -95,8 +99,7 @@ class Service(object):
         client.services.create(self.image,
                                command=self.entrypoint,
                                args=self.command,
-                               # constraints=self.constraints,
-                               configs=self.configs,
+                               constraints=self.constraints,
                                container_labels=self.container_labels,
                                endpoint_spec=self.endpoint_spec,
                                env=self.environment,
@@ -114,7 +117,8 @@ class Service(object):
                                stop_grace_period=self.stop_grace_period,
                                update_config=self.update_config,
                                user=self.user,
-                               workdir=self.workdir)
+                               workdir=self.workdir,
+                               configs=self.configs)
 
     def _initialize_service(self):
         self._service_networks()
@@ -136,6 +140,10 @@ class Service(object):
                 self._service_update_config(self.deploy.get('update_config'))
             if self.deploy.get('mode') or self.deploy.get('replicas'):
                 self._service_mode(self.deploy)
+            if self.deploy.get('placement'):
+                constraints = self.deploy.get('placement').get('constraints')
+                if constraints and isinstance(constraints, list):
+                    self.constraints = constraints
         if self.command and isinstance(self.command, Text):
             self.command = self.command.split()
         if self.healthcheck:
@@ -144,6 +152,15 @@ class Service(object):
             self._service_volumes()
 
     def _service_networks(self):
+        """
+        Check if there is any network associated with the service, if so it
+        will create a list of NetworkAttachments adding the network name and
+        the service name. The aliases parameter in NetworkAttachments allow the
+        container to be reachable in the same network by its name as defined in
+        the compose-file.
+        In case the container does not have any network associated, it will
+        attach the default network to it - which was create in the Stack class.
+        """
         if self.networks and isinstance(self.networks, list):
             self.network_attachments = list(map(
                 lambda nt: NetworkAttachment(network=nt, aliases=[self.name]),
@@ -156,6 +173,11 @@ class Service(object):
             ]
 
     def _service_endpoint_specs(self, ports: List[str]) -> None:
+        """
+        Converts the 'ports' parameter in the compose-file into a EndpointSpec
+        class as expected by docker-py lib. The only syntax supported is:
+        - "8080:8080"
+        """
         ports_dict = dict()
         for p in ports:
             p_host, p_container = p.split(":")
@@ -163,12 +185,21 @@ class Service(object):
         self.endpoint_spec = EndpointSpec(ports=ports_dict)
 
     def _service_mode(self, mode: Dict) -> None:
+        """
+        Converts a couple of parameters - deploy['mode'] and deploy['replicas']
+        into a ServiceMode class as expected by docker-py lib.
+        Defaults to a 'replicated' service with 1 replica.
+        """
         svc_mode = mode.get('mode') or Modes.REPLICATED
         svc_replicas = mode.get('replicas') or 1 \
             if svc_mode != Modes.GLOBAL else None
         self.mode = ServiceMode(mode=svc_mode, replicas=svc_replicas)
 
     def _service_update_config(self, update_cfg_dict: Dict) -> None:
+        """
+        Converts the parameters in deploy[update_config] into a UpdateConfig
+        class as expected by docker-py lib.
+        """
         self.update_config = UpdateConfig(
             parallelism=update_cfg_dict.get('parallelism') or 0,
             delay=convert_time_to_secs(update_cfg_dict.get('delay')) or None,
@@ -180,6 +211,10 @@ class Service(object):
         )
 
     def _service_restart_policy(self, restart_policy_dict: Dict) -> None:
+        """
+        Converts the parameters in deploy[restart_policy] into a RestartPolicy
+        class as expected by docker-py lib.
+        """
         self.restart_policy = RestartPolicy(
             condition=restart_policy_dict.get('condition') or 'none',
             delay=convert_time_to_secs(restart_policy_dict.get('delay')) or 0,
@@ -188,10 +223,19 @@ class Service(object):
         )
 
     def _service_container_labels(self, labels) -> None:
+        """
+        Checks if the labels parameter - do not confuse with deploy[labels] -
+        is either a dict or a list of strings. If it is a dictionary it will
+        just update self.container_labels, else it will convert the list of
+        strings to a dictionary.
+        """
         if isinstance(labels, dict):
             self.container_labels.update(labels)
         elif isinstance(labels, list):
             def label_to_dict(label: str):
+                # String labels usually have 'key=value' format, but it could
+                # also happen to be just a 'key' without value - in this case
+                # we add an empty value to the label.
                 if "=" in label:
                     label_key, label_value = label.split('=')
                     return {label_key: label_value}
@@ -204,9 +248,16 @@ class Service(object):
             self.container_labels.update(label_dict)
 
     def _service_labels(self, labels):
+        """
+        Adds the contents of deploy[labels] to service_labels.
+        """
         self.service_labels.update(labels)
 
     def _service_healthcheck(self):
+        """
+        Converts the parameters in healthcheck into a Healthcheck
+        class as expected by docker-py lib.
+        """
         healthcheck = self.healthcheck.copy()
         self.healthcheck = Healthcheck(
             test=healthcheck.get('test'),
@@ -223,6 +274,11 @@ class Service(object):
         )
 
     def _service_volumes(self):
+        """
+        Converts the list of strings provided for volumes into a list of
+        strings expected by docker-py lib. This string should have the format -
+        'volume_name:path_in_container:rw|ro'.
+        """
         if isinstance(self.volumes, list):
             volumes = self.volumes.copy()
             for volume in volumes:

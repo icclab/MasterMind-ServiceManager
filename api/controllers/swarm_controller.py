@@ -6,6 +6,9 @@ from swarm.swarm import get_swarm_status
 
 
 def swarm_status(swarm):
+    """
+    POST /v1/swarm/
+    """
     if connexion.request.is_json:
         swarm = Swarm.from_dict(connexion.request.get_json())
     temp_files = dict()

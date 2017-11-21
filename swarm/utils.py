@@ -27,6 +27,11 @@ SECS_TO_NANOSECS = 1000000000
 
 
 def convert_time_string_to_secs(string: str) -> int:
+    """
+    Takes a string in the format '1h30m25s' and converts it to an integer
+    in seconds. This functions uses the regular expression RE_CONVERT_TIME
+    above for matching the string.
+    """
     match = regexp_time.match(string)
     if not match:
         raise ValueError("String {0} has an invalid representation")

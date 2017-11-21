@@ -15,13 +15,6 @@
 #
 # AUTHOR: Bruno Grazioli
 
-VOLUME_KEYS = [
-    "driver",
-    "driver_opts",
-    "labels"
-    "external"
-]
-
 
 class Volume(object):
     def __init__(

@@ -17,19 +17,6 @@
 
 from docker import DockerClient
 
-IPAM_CONFIG_KEYS = [
-    'driver',
-    'options'
-    'pool_configs'
-]
-
-IPAM_POOL_KEYS = [
-    'subnet',
-    'iprange',
-    'gateway',
-    'aux_addresses'
-]
-
 
 class Network(object):
     def __init__(
@@ -85,6 +72,11 @@ class Network(object):
                 self.driver_options[key] = str(value)
 
     def _network_labels(self):
+        """
+        Checks if the labels parameter is either a dict or a list of strings.
+        If it is a dictionary it will just update self.container_labels,
+        else it will convert the list of strings to a dictionary.
+        """
         if isinstance(self.labels, list):
             def label_to_dict(label: str):
                 if "=" in label:

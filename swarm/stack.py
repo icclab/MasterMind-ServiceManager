@@ -47,6 +47,9 @@ class Stack(object):
         self.volume_dict = {}
 
     def create(self) -> Tuple[List[Service], List[Network], List[Volume]]:
+        """
+        Creates a Stack - POST /v1/stack/
+        """
         self.service_dict = self.compose_file.get('services')
         self.network_dict = self.compose_file.get('networks') or {}
         self.volume_dict = self.compose_file.get('volumes') or {}
@@ -57,6 +60,10 @@ class Stack(object):
         return self.services, self.networks, self.volumes
 
     def remove(self) -> None:
+        """
+        Deletes a Stack - POST /v1/stack/delete/{name}
+        Volumes are not deleted.
+        """
         svc_list = self._get_stack_services()
         net_list = self._get_stack_networks()
 
@@ -66,6 +73,11 @@ class Stack(object):
             net.remove()
 
     def health(self) -> List[Dict]:
+        """
+        Gets a stack status - POST /v1/stack/{name}
+        Returns Services associated to a Stack and their status -
+        amount of active replicas / total amount of replicas it should have.
+        """
         svc_list = self._get_stack_services()
         svcs = list(map(
             self._filter_service_info,
@@ -74,13 +86,23 @@ class Stack(object):
         return svcs
 
     def _create_networks(self) -> None:
+        """
+        Creates networks required by the Stack, it also checks if a service
+        does not have networks associated to it. If so it will create a
+        'default_{stack_name}' network for that service.
+        This function also checks if the network is external and if it exists.
+        """
         def check_if_network_is_external(net_tuple: Tuple):
             net_name, net_attrs = net_tuple
             if not net_attrs:
                 net_attrs = {}
             if not net_attrs.get('external'):
+                # This variable keeps track of all networks which are
+                # not external
                 self.stack_networks.append(net_name)
-                return self._create_obj_from_tuple(net_tuple, Network)
+                return Network(net_name,
+                               stack_name=self.stack_name,
+                               **net_attrs)
             if not self.client.networks.list(names=[net_name]):
                 raise NetworkNotFound(
                             "External network {0} not found.".format(net_name)
@@ -95,6 +117,9 @@ class Stack(object):
                 net.create(self.client)
 
     def _create_default_network(self) -> None:
+        """
+        Creates the default network for services without networks defined.
+        """
         default_net = Network(name='default',
                               stack_name=self.stack_name,
                               driver='overlay')
@@ -102,12 +127,18 @@ class Stack(object):
         self.networks.append(default_net)
 
     def _create_volumes(self) -> None:
+        """
+        Creates volumes required by the Stack.
+        This function also checks if the volume is external and if it exists.
+        """
         def check_if_volume_is_external(vol_tuple: Tuple):
             vol_name, vol_attrs = vol_tuple
             if not vol_attrs:
                 vol_attrs = {}
             if not vol_attrs.get('external'):
-                return self._create_obj_from_tuple(vol_tuple, Volume)
+                return Volume(vol_name,
+                              stack_name=self.stack_name,
+                              **vol_attrs)
             if not self.client.volumes.list(filters={'name': vol_name}):
                 raise VolumeNotFound(
                     "External volume {0} not found.".format(vol_name)
@@ -122,9 +153,11 @@ class Stack(object):
                 vol.create(self.client)
 
     def _create_services(self) -> None:
+
         self._check_stack_service_attributes()
+
         self.services = list(map(
-            lambda sc: self._create_obj_from_tuple(sc, Service),
+            lambda sc: self._create_svc_from_tuple(sc),
             self.service_dict.items()
         ))
         for svc in self.services:
@@ -138,6 +171,10 @@ class Stack(object):
             self._parse_stack_service_configs(svc_attrs.get('configs') or [])
 
     def _parse_stack_service_networks(self, nets: Union[List, Dict]) -> None:
+        """
+        Check the networks associated with the service, if the network is
+        not external then it will prepend the stack_name to the network name.
+        """
         if isinstance(nets, list):
             nets_copy = nets.copy()
             for net in nets_copy:
@@ -146,11 +183,18 @@ class Stack(object):
                         self.stack_name, net
                     )
             if not nets:
+                # Other service in the stack might have created the default
+                # network.
                 if not self.default_network_created:
                     self._create_default_network()
                     self.default_network_created = True
 
     def _parse_stack_service_secrets(self, secrets: List) -> None:
+        """
+        Checks if there is any Secret associated to the service,
+        if so it retrieves the id of the secret and creates a SecretReference
+        as expected by the docker-py lib.
+        """
         def get_secret_id(scrt_name: str):
             scrt = self.client.secrets.list(filters={'names': scrt_name})
             if not scrt:
@@ -178,6 +222,11 @@ class Stack(object):
                 )
 
     def _parse_stack_service_configs(self, configs: List) -> None:
+        """
+        Checks if there is any Config associated to the service,
+        if so it retrieves the id of the config and creates a ConfigReference
+        as expected by the docker-py lib.
+        """
         def get_config_id(cnfg_name: str):
             cnfg = self.client.configs.list(filters={'names': cnfg_name})
             if not cnfg:
@@ -204,16 +253,19 @@ class Stack(object):
                     mode=config.get('mode') or 0o444
                 )
 
-    def _create_obj_from_tuple(self, dict_tuple: Tuple,
-                               obj_class) -> Union[Service, Network, Volume]:
+    def _create_svc_from_tuple(self, dict_tuple: Tuple,) -> Service:
         obj_name, obj_attrs = dict_tuple
         if not obj_attrs:
             obj_attrs = {}
-        return obj_class(obj_name, stack_name=self.stack_name, **obj_attrs)
+        return Service(obj_name, stack_name=self.stack_name, **obj_attrs)
 
     def _get_stack_services(self) -> Iterable[services.Service]:
         filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
         return self.client.services.list(filters={'label': filter_lbl})
+
+    def _get_stack_networks(self) -> Iterable[networks.Network]:
+        filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
+        return self.client.networks.list(filters={'label': filter_lbl})
 
     @staticmethod
     def _filter_service_info(svc: services.Service) -> Dict:
@@ -232,7 +284,3 @@ class Stack(object):
                 svc_attrs.get('Mode').get('Replicated').get('Replicas')
             )
         )
-
-    def _get_stack_networks(self) -> Iterable[networks.Network]:
-        filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
-        return self.client.networks.list(filters={'label': filter_lbl})

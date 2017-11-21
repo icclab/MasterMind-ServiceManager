@@ -32,8 +32,63 @@ from swarm.exceptions import NetworkNotFound, VolumeNotFound,\
     InvalidYAMLFile
 
 
-def get_stack(name, stack) -> Tuple[Dict, int]:
+def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
+    """
+    POST /v1/stack/
+    This function takes the parameters defined in the endpoint above and
+    creates a Stack object from the model to easy the way parameters are
+    handled - Stack model object instead of a Dictionary.
+    Certain files such as CA cert, cert and key need to be created as temporary
+    files in the host order to create a DockerClient to communicate the engine
+    - this is a requirement by the docker-py library.
+    Then it will attempt to create secrets and config (if any) before creating
+    a new StackCls.
+    """
 
+    temp_files = dict()
+    stack = Stack.from_dict(connexion.request.get_json())
+    try:
+        temp_files = create_temp_files(stack.ca_cert,
+                                       stack.cert,
+                                       stack.cert_key)
+        cli = get_client(stack.engine_url, tls=temp_files)
+
+        # Parsing the raw string in yaml format to a dictionary.
+        compose = parse_compose_file(stack.compose_file,
+                                     stack.compose_vars)
+
+        # Attempt to create an external file - if any.
+        create_secrets_and_configs(cli, compose, stack.external_files)
+
+        stack_obj = StackCls(stack_name=stack.name, compose_file=compose,
+                             client=cli)
+        # stack_obj.create() returns a tuple with services, networks and
+        # volumes created.
+        service_list = stack_obj.create()
+        service_list = service_list[0]
+
+    except InvalidYAMLFile:
+        return response(400, "Invalid yaml file.")
+    except ConnectionError:
+        return response(400, "Connection error, "
+                             "please check if the Docker engine is reachable.")
+    except NetworkNotFound as err:
+        return response(400, err.msg)
+    except VolumeNotFound as err:
+        return response(400, err.msg)
+    finally:
+        # Close any temporary files - this function will also delete them
+        # from the system
+        if temp_files:
+            close_temp_files(temp_files)
+    return response(201, "Stack successfully deployed!",
+                    {"services": [service.name for service in service_list]})
+
+
+def get_stack(name, stack) -> Tuple[Dict, int]:
+    """
+    POST /v1/stack/{name}
+    """
     temp_files = dict()
     stack = Stack.from_dict(connexion.request.get_json())
 
@@ -53,43 +108,10 @@ def get_stack(name, stack) -> Tuple[Dict, int]:
     return response(200, "", {"stack_status": str(stack_status)})
 
 
-def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
-
-    temp_files = dict()
-    stack = Stack.from_dict(connexion.request.get_json())
-    try:
-
-        temp_files = create_temp_files(stack.ca_cert,
-                                       stack.cert,
-                                       stack.cert_key)
-        cli = get_client(stack.engine_url, tls=temp_files)
-
-        compose = parse_compose_file(stack.compose_file,
-                                     stack.compose_vars)
-
-        create_secrets_and_configs(cli, compose, stack.external_files)
-        stack_obj = StackCls(stack_name=stack.name, compose_file=compose,
-                             client=cli)
-        service_list = stack_obj.create()
-        service_list = service_list[0]
-
-    except InvalidYAMLFile:
-        return response(400, "Invalid yaml file.")
-    except ConnectionError:
-        return response(400, "Connection error, "
-                             "please check if the Docker engine is reachable.")
-    except NetworkNotFound as err:
-        return response(400, err.msg)
-    except VolumeNotFound as err:
-        return response(400, err.msg)
-    finally:
-        if temp_files:
-            close_temp_files(temp_files)
-    return response(201, "Stack successfully deployed!",
-                    {"services": [service.name for service in service_list]})
-
-
 def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
+    """
+    POST /v1/stack/delete/{name}
+    """
 
     temp_files = dict()
     stack = Stack.from_dict(connexion.request.get_json())
@@ -110,6 +132,9 @@ def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
 
 
 def get_client(engine_url: str, tls: Dict=None):
+    """
+    Creates a DockerClient in order to talk with the Docker engine.
+    """
     tls_config = False
     if tls:
         tls_config = docker.tls.TLSConfig(
@@ -128,19 +153,29 @@ def get_client(engine_url: str, tls: Dict=None):
 def create_temp_files(ca_cert: str=None,
                       cert: str=None,
                       key: str=None) -> Dict:
-
+    """
+    Creates a new temporary directory on /tmp/ and also creates temporary
+    files holding the certificates with the Docker engine. These files are
+    removed as soon as the connection is closed.
+    """
     if ca_cert and cert and key:
         directory_name = tempfile.mkdtemp()
 
-        ca_cert_temp = create_temporary_file(directory_name)
+        ca_cert_temp = tempfile.NamedTemporaryFile(mode='w+t',
+                                                   dir=directory_name,
+                                                   delete=False)
         ca_cert_temp.write(ca_cert)
         ca_cert_temp.close()
 
-        cert_temp = create_temporary_file(directory_name)
+        cert_temp = tempfile.NamedTemporaryFile(mode='w+t',
+                                                dir=directory_name,
+                                                delete=False)
         cert_temp.write(cert)
         cert_temp.close()
 
-        key_temp = create_temporary_file(directory_name)
+        key_temp = tempfile.NamedTemporaryFile(mode='w+t',
+                                               dir=directory_name,
+                                               delete=False)
         key_temp.write(key)
         key_temp.close()
 
@@ -151,12 +186,6 @@ def create_temp_files(ca_cert: str=None,
     return {}
 
 
-def create_temporary_file(directory: str=None) -> tempfile.NamedTemporaryFile:
-    return tempfile.NamedTemporaryFile(mode='w+t',
-                                       dir=directory,
-                                       delete=False)
-
-
 def close_temp_files(temp_files: Dict) -> None:
     os.remove(temp_files['ca_cert'].name)
     os.remove(temp_files['cert'].name)
@@ -165,6 +194,16 @@ def close_temp_files(temp_files: Dict) -> None:
 
 
 def create_secrets_and_configs(client, compose, external_files) -> None:
+    """
+    Check if there are any content in the 'external_files' parameter, if so
+    this function will check whether the file is a secret or a config based on
+    the 'compose-file' parameter.
+    The match is based on the file_name in 'external_files' with the file
+    parameter in either secrets or configs in 'compose-file'.
+    If there is a match this function will then check if the secret or config
+    already exists based on the label 'mastermind.namespace'. If not, a new
+    secret or config is created with the label above.
+    """
     secrets = compose.get('secrets') or {}
     configs = compose.get('configs') or {}
 
@@ -190,6 +229,12 @@ def create_secrets_and_configs(client, compose, external_files) -> None:
 
 
 def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
+    """
+    Converts a string in yaml format to a python dictionary.
+    Variable substitution is also enabled, variables maybe be defined as
+    ${ VARIABLE_NAME } in the 'compose-file' parameter.
+    Note that a corresponding value needs to be included in 'compose-vars'.
+    """
     try:
         if compose_vars:
             compose_template = Template(compose,
