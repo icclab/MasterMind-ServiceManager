@@ -83,8 +83,6 @@ class Service(object):
         self.constraints = None
         self.endpoint_spec = None
         self.service_labels = {}
-        self.log_driver = None
-        self.log_driver_options = None
         self.mode = None
         self.network_attachments = None
         self.restart_policy = None
@@ -106,8 +104,6 @@ class Service(object):
                                healthcheck=self.healthcheck,
                                hostname=self.hostname,
                                labels=self.service_labels,
-                               log_driver=self.log_driver,
-                               log_driver_options=self.log_driver_options,
                                mode=self.mode,
                                mounts=self.volumes,
                                name=self.name,
