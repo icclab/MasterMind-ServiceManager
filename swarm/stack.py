@@ -39,6 +39,7 @@ class Stack(object):
 
         self.default_network_created = False
         self.stack_networks = []
+        self.stack_volumes = []
         self.services = []
         self.networks = []
         self.volumes = []
@@ -92,29 +93,30 @@ class Stack(object):
         'default_{stack_name}' network for that service.
         This function also checks if the network is external and if it exists.
         """
-        def check_if_network_is_external(net_tuple: Tuple):
-            net_name, net_attrs = net_tuple
-            if not net_attrs:
-                net_attrs = {}
-            if not net_attrs.get('external'):
-                # This variable keeps track of all networks which are
-                # not external
-                self.stack_networks.append(net_name)
-                return Network(net_name,
-                               stack_name=self.stack_name,
-                               **net_attrs)
-            if not self.client.networks.list(names=[net_name]):
-                raise NetworkNotFound(
-                            "External network {0} not found.".format(net_name)
-                )
-            return net_name
         self.networks = list(map(
-            lambda nt: check_if_network_is_external(nt),
+            lambda nt: self._check_if_network_is_external(nt),
             self.network_dict.items()
         ))
         for net in self.networks:
             if isinstance(net, Network):
                 net.create(self.client)
+
+    def _check_if_network_is_external(self, net_tuple: Tuple):
+        net_name, net_attrs = net_tuple
+        if not net_attrs:
+            net_attrs = {}
+        if not net_attrs.get('external'):
+            # This variable keeps track of all networks which are
+            # not external
+            self.stack_networks.append(net_name)
+            return Network(net_name,
+                           stack_name=self.stack_name,
+                           **net_attrs)
+        if not self.client.networks.list(names=[net_name]):
+            raise NetworkNotFound(
+                "External network {0} not found.".format(net_name)
+            )
+        return net_name
 
     def _create_default_network(self) -> None:
         """
@@ -131,26 +133,29 @@ class Stack(object):
         Creates volumes required by the Stack.
         This function also checks if the volume is external and if it exists.
         """
-        def check_if_volume_is_external(vol_tuple: Tuple):
-            vol_name, vol_attrs = vol_tuple
-            if not vol_attrs:
-                vol_attrs = {}
-            if not vol_attrs.get('external'):
-                return Volume(vol_name,
-                              stack_name=self.stack_name,
-                              **vol_attrs)
-            if not self.client.volumes.list(filters={'name': vol_name}):
-                raise VolumeNotFound(
-                    "External volume {0} not found.".format(vol_name)
-                )
-            return vol_name
+
         self.volumes = list(map(
-            lambda vl: check_if_volume_is_external(vl),
+            lambda vl: self._check_if_volume_is_external(vl),
             self.volume_dict.items()
         ))
         for vol in self.volumes:
             if isinstance(vol, Volume):
                 vol.create(self.client)
+
+    def _check_if_volume_is_external(self, vol_tuple: Tuple):
+        vol_name, vol_attrs = vol_tuple
+        if not vol_attrs:
+            vol_attrs = {}
+        if not vol_attrs.get('external'):
+            self.stack_volumes.append(vol_name)
+            return Volume(vol_name,
+                          stack_name=self.stack_name,
+                          **vol_attrs)
+        if not self.client.volumes.list(filters={'name': vol_name}):
+            raise VolumeNotFound(
+                "External volume {0} not found.".format(vol_name)
+            )
+        return vol_name
 
     def _create_services(self) -> None:
 
@@ -167,6 +172,7 @@ class Stack(object):
     def _check_stack_service_attributes(self) -> None:
         for svc_name, svc_attrs in self.service_dict.items():
             self._parse_stack_service_networks(svc_attrs.get('networks') or [])
+            self._parse_stack_service_volumes(svc_attrs.get('volumes') or [])
             self._parse_stack_service_secrets(svc_attrs.get('secrets') or [])
             self._parse_stack_service_configs(svc_attrs.get('configs') or [])
 
@@ -188,6 +194,24 @@ class Stack(object):
                 if not self.default_network_created:
                     self._create_default_network()
                     self.default_network_created = True
+
+    def _parse_stack_service_volumes(self, vols: List) -> None:
+        """
+        Check the volumes associated with the service, if the volume is
+        not external then it will prepend the stack_name to the volume name.
+        """
+        if isinstance(vols, list):
+            vols_copy = vols.copy()
+            for vol in vols_copy:
+                volume_str_list = vol.split(':')
+                if len(volume_str_list) == 2:
+                    vol_name = volume_str_list[0]
+                else:
+                    vol_name = vol
+                if vol_name in self.stack_volumes:
+                    vols[vols.index(vol)] = '{0}_{1}'.format(
+                        self.stack_name, vol
+                    )
 
     def _parse_stack_service_secrets(self, secrets: List) -> None:
         """
@@ -228,7 +252,7 @@ class Stack(object):
         as expected by the docker-py lib.
         """
         def get_config_id(cnfg_name: str):
-            cnfg = self.client.configs.list(filters={'names': cnfg_name})
+            cnfg = self.client.configs.list(filters={'name': cnfg_name})
             if not cnfg:
                 raise ConfigNotFound('Config {0} not found'.format(cnfg_name))
             if len(cnfg) == 1:
