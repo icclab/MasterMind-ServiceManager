@@ -88,6 +88,8 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
 def get_stack(name, stack) -> Tuple[Dict, int]:
     """
     POST /v1/stack/{name}
+    POST method instead of GET. This method includes a content body which was
+    getting dropped using GET.
     """
     temp_files = dict()
     stack = Stack.from_dict(connexion.request.get_json())
@@ -111,6 +113,8 @@ def get_stack(name, stack) -> Tuple[Dict, int]:
 def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
     """
     POST /v1/stack/delete/{name}
+    POST method instead of DELETE. This method includes a content body which
+    was getting dropped using DELETE.
     """
 
     temp_files = dict()
