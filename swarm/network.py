@@ -18,6 +18,10 @@
 from docker import DockerClient
 import docker.errors
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Network(object):
     def __init__(
@@ -54,14 +58,16 @@ class Network(object):
     def create(self, client: DockerClient)-> bool:
         try:
             client.networks.create(name=self.name,
-                               driver=self.driver,
-                               options=self.driver_options,
-                               ipam=self.ipam,
-                               check_duplicate=self.check_duplicate,
-                               internal=self.internal,
-                               labels=self.labels)
+                                   driver=self.driver,
+                                   options=self.driver_options,
+                                   ipam=self.ipam,
+                                   check_duplicate=self.check_duplicate,
+                                   internal=self.internal,
+                                   labels=self.labels)
             return True
-        except docker.errors.APIError:
+        except docker.errors.APIError as err:
+            logger.info("Error creating network {0} - error message: {1}"
+                        .format(self.name, err))
             return False
 
     def remove(self, client: DockerClient) -> bool:

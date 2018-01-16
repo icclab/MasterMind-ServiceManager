@@ -45,7 +45,7 @@ def _deserialize_primitive(data, klass):
     try:
         value = klass(data)
     except UnicodeEncodeError:
-        value = unicode(data)
+        value = str(data, 'utf-8')
     except TypeError:
         value = data
     return value
@@ -131,7 +131,6 @@ def _deserialize_list(data, boxed_type):
     """
     return [_deserialize(sub_data, boxed_type)
             for sub_data in data]
-
 
 
 def _deserialize_dict(data, boxed_type):

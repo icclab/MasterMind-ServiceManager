@@ -24,6 +24,10 @@ from docker.errors import APIError
 
 from .utils import convert_time_to_secs, convert_time_to_nano_secs
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Modes(object):
     """Enumeration for the types of service modes known to compose."""
@@ -94,41 +98,47 @@ class Service(object):
     def __repr__(self):
         return "<Service: {}>".format(self.name)
 
-    def create(self, client: DockerClient):
-        client.services.create(self.image,
-                               command=self.entrypoint,
-                               args=self.command,
-                               constraints=self.constraints,
-                               container_labels=self.container_labels,
-                               endpoint_spec=self.endpoint_spec,
-                               env=self.environment,
-                               healthcheck=self.healthcheck,
-                               hostname=self.hostname,
-                               labels=self.service_labels,
-                               mode=self.mode,
-                               mounts=self.volumes,
-                               name=self.name,
-                               networks=self.network_attachments,
-                               restart_policy=self.restart_policy,
-                               secrets=self.secrets,
-                               stop_grace_period=self.stop_grace_period,
-                               update_config=self.update_config,
-                               user=self.user,
-                               workdir=self.workdir,
-                               configs=self.configs)
+    def create(self, client: DockerClient) -> bool:
+        try:
+            client.services.create(self.image,
+                                   command=self.entrypoint,
+                                   args=self.command,
+                                   constraints=self.constraints,
+                                   container_labels=self.container_labels,
+                                   endpoint_spec=self.endpoint_spec,
+                                   env=self.environment,
+                                   healthcheck=self.healthcheck,
+                                   hostname=self.hostname,
+                                   labels=self.service_labels,
+                                   mode=self.mode,
+                                   mounts=self.volumes,
+                                   name=self.name,
+                                   networks=self.network_attachments,
+                                   restart_policy=self.restart_policy,
+                                   secrets=self.secrets,
+                                   stop_grace_period=self.stop_grace_period,
+                                   update_config=self.update_config,
+                                   user=self.user,
+                                   workdir=self.workdir,
+                                   configs=self.configs)
+            return True
+        except APIError as err:
+            logger.info("Error creating service {0} - error message: {1}"
+                        .format(self.name, err))
+            return False
 
     def remove(self, client: DockerClient) -> bool:
         try:
-            params = {'name': self.name}
-            service_list = client.services.list(**params)
+            filters = {'name': self.name}
+            service_list = client.services.list(filters=filters)
             # add logic to handle case in which no service is found...
             service_list[0].remove()
             return True
         except APIError as err:
             # TODO(murp): need to perform more intelligent error handling here.
-            logger.info("Error removing service {0} - err msg: {1}".format(self.name, err))
+            logger.info("Error removing service {0} - err msg: {1}"
+                        .format(self.name, err))
             return False
-
 
     def _initialize_service(self):
         self._service_networks()

@@ -61,12 +61,22 @@ class Stack(object):
         self.volume_dict = self.compose_file.get('volumes') or {}
 
         networks_created = self._create_networks()
+        if not networks_created:
+            self._tidy_up_networks()
+            return None, None, None
+
         volumes_created = self._create_volumes()
+        if not volumes_created:
+            self._tidy_up_volumes()
+            self._tidy_up_networks()
+            return None, None, None
+
         services_created = self._create_services()
-        if networks_created is False or volumes_created is False or \
-           services_created is False:
+        if not services_created:
             self._tidy_up_failed_deploy()
             return None, None, None
+
+        logger.info("Service created successfully...")
         return self.services, self.networks, self.volumes
 
     def remove(self) -> None:
@@ -114,6 +124,7 @@ class Stack(object):
         for net in self.networks:
             if isinstance(net, Network):
                 if net.create(self.client) is False:
+                    logger.info("Error creating network {0}".format(net))
                     return_val = False
 
         return return_val
@@ -161,6 +172,7 @@ class Stack(object):
         for vol in self.volumes:
             if isinstance(vol, Volume):
                 if vol.create(self.client) is False:
+                    logger.info("Error creating volume {0}".format(vol))
                     return_val = False
 
         return return_val
@@ -195,9 +207,10 @@ class Stack(object):
             if isinstance(svc, Service):
                 try:
                     if not svc.create(self.client):
+                        logger.info("Error creating service {0}".format(svc))
                         return_val = False
                 except APIError:
-                    # should add some logging here...
+                    logger.info("Error creating service {0}".format(svc))
                     return_val = False
 
         return return_val
@@ -369,6 +382,8 @@ class Stack(object):
         for s in self.services:
             if isinstance(s, Service):
                 try:
-                    s.remove(self.client)
+                    if s.remove(self.client):
+                        logger.info("Removed service {0}".format(s))
                 except APIError as err:
-                    logger.info("Error removing service - error msg: {0}".format(err))
+                    logger.info("Error removing service - error msg: {0}"
+                                .format(err))

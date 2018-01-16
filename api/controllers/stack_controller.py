@@ -31,6 +31,10 @@ from swarm.stack import Stack as StackCls
 from swarm.exceptions import NetworkNotFound, VolumeNotFound,\
     InvalidYAMLFile
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
     """
@@ -45,6 +49,7 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
     a new StackCls.
     """
 
+    logger.info("Deploying stack...")
     temp_files = dict()
     stack = Stack.from_dict(connexion.request.get_json())
     try:
@@ -70,17 +75,25 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
         # Nones
         if service_list[0] is None and service_list[1] is None and \
            service_list[2] is None:
+            logger.info("Error deploying stack...")
             return response(400, "Error Deploying Service")
         service_list = service_list[0]
 
     except InvalidYAMLFile:
+        logger.info("Error deploying service - invalid yaml file...")
         return response(400, "Invalid yaml file.")
     except ConnectionError:
+        logger.info("Error deploying service - error connecting to docker \
+            engine...")
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
     except NetworkNotFound as err:
+        logger.info("Error deploying service - network not found. \
+            Error msg: {0}".format(err))
         return response(400, err.msg)
     except VolumeNotFound as err:
+        logger.info("Error deploying service - volume not found. \
+            Error msg: {0}".format(err))
         return response(400, err.msg)
     finally:
         # Close any temporary files - this function will also delete them

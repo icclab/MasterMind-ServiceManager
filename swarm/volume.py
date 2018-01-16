@@ -21,6 +21,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Volume(object):
     def __init__(
             self,
@@ -76,5 +77,6 @@ def remove_volume(vol_name: str, client: DockerClient) -> bool:
         return True
     except docker.errors.APIError as err:
         # TODO(murp): need to perform more intelligent error handling here.
-        logger.info("Problem removing volume {0} - error message: {1}".format(vol_name, err))
+        logger.info("Problem removing volume {0} - error message: {1}"
+                    .format(vol_name, err))
         return False
