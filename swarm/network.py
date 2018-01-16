@@ -16,6 +16,7 @@
 # AUTHOR: Bruno Grazioli
 
 from docker import DockerClient
+import docker.errors
 
 
 class Network(object):
@@ -50,14 +51,27 @@ class Network(object):
     def __repr__(self):
         return "<Network: {}>".format(self.name)
 
-    def create(self, client: DockerClient):
-        client.networks.create(name=self.name,
+    def create(self, client: DockerClient)-> bool:
+        try:
+            client.networks.create(name=self.name,
                                driver=self.driver,
                                options=self.driver_options,
                                ipam=self.ipam,
                                check_duplicate=self.check_duplicate,
                                internal=self.internal,
                                labels=self.labels)
+            return True
+        except docker.errors.APIError:
+            return False
+
+    def remove(self, client: DockerClient) -> bool:
+        try:
+            n = client.networks.list(names=self.name)
+            print("Networks Found: {0}".format(n))
+            n[0].remove()
+            return True
+        except docker.errors.APIError:
+            return False
 
     def _initialize_network(self):
         self._network_labels()

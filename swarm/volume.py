@@ -15,6 +15,11 @@
 #
 # AUTHOR: Bruno Grazioli
 
+from docker import DockerClient
+import docker.errors
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Volume(object):
     def __init__(
@@ -37,15 +42,39 @@ class Volume(object):
     def __repr__(self):
         return "<Volume: {}>".format(self.name)
 
-    def create(self, client) -> None:
+    def create(self, client: DockerClient) -> None:
         if not self.external:
             client.volumes.create(name=self.name,
                                   driver=self.driver,
                                   driver_opts=self.driver_opts,
                                   labels=self.labels)
 
+    def remove(self, client: DockerClient) -> bool:
+        try:
+            v = client.volumes.get(volume_id=self.name)
+            v.remove()
+            return True
+        except docker.errors.APIError:
+            # TODO(murp): need to perform more intelligent error handling here.
+            return False
+
     def _initialize_volume(self) -> None:
         if self.stack_name:
             if not self.external:
                 self.name = '{0}_{1}'.format(self.stack_name, self.name)
             self.labels.update({"com.docker.stack.namespace": self.stack_name})
+
+
+def remove_volume(vol_name: str, client: DockerClient) -> bool:
+    '''Removes volume of given name from engine pointed to by client'''
+    try:
+        logger.debug("About to remove volume {0}".format(vol_name))
+        v = client.volumes.get(volume_id=vol_name)
+        logger.debug("Volume: {0}".format(v))
+        v.remove()
+        logger.info("Successfully removed volume {0}".format(vol_name))
+        return True
+    except docker.errors.APIError as err:
+        # TODO(murp): need to perform more intelligent error handling here.
+        logger.info("Problem removing volume {0} - error message: {1}".format(vol_name, err))
+        return False

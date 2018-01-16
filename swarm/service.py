@@ -20,6 +20,7 @@ from docker.types.services import ServiceMode, EndpointSpec, RestartPolicy, \
     UpdateConfig, NetworkAttachment
 from docker.types.healthcheck import Healthcheck
 from typing import List, Dict, Text
+from docker.errors import APIError
 
 from .utils import convert_time_to_secs, convert_time_to_nano_secs
 
@@ -115,6 +116,19 @@ class Service(object):
                                user=self.user,
                                workdir=self.workdir,
                                configs=self.configs)
+
+    def remove(self, client: DockerClient) -> bool:
+        try:
+            params = {'name': self.name}
+            service_list = client.services.list(**params)
+            # add logic to handle case in which no service is found...
+            service_list[0].remove()
+            return True
+        except APIError as err:
+            # TODO(murp): need to perform more intelligent error handling here.
+            logger.info("Error removing service {0} - err msg: {1}".format(self.name, err))
+            return False
+
 
     def _initialize_service(self):
         self._service_networks()

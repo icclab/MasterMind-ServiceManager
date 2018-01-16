@@ -65,6 +65,12 @@ def deploy_stack(stack: Dict) -> Tuple[Dict, int]:
         # stack_obj.create() returns a tuple with services, networks and
         # volumes created.
         service_list = stack_obj.create()
+
+        # Error condition has occured if create() returns array containing
+        # Nones
+        if service_list[0] is None and service_list[1] is None and \
+           service_list[2] is None:
+            return response(400, "Error Deploying Service")
         service_list = service_list[0]
 
     except InvalidYAMLFile:

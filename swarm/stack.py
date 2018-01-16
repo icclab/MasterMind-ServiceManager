@@ -13,19 +13,24 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-# AUTHOR: Bruno Grazioli
+# AUTHOR: Bruno Grazioli, Seán Murphy
 
 from __future__ import absolute_import
 from typing import Dict, Union, Tuple, List, Iterable
 from docker import DockerClient
 from docker.models import services, networks
+from docker.errors import APIError
 from docker.types.services import SecretReference, ConfigReference
 
 from .exceptions import NetworkNotFound, VolumeNotFound, SecretNotFound, \
     ConfigNotFound
 from .network import Network
 from .service import Service
-from .volume import Volume
+from .volume import Volume, remove_volume
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Stack(object):
@@ -55,9 +60,13 @@ class Stack(object):
         self.network_dict = self.compose_file.get('networks') or {}
         self.volume_dict = self.compose_file.get('volumes') or {}
 
-        self._create_networks()
-        self._create_volumes()
-        self._create_services()
+        networks_created = self._create_networks()
+        volumes_created = self._create_volumes()
+        services_created = self._create_services()
+        if networks_created is False or volumes_created is False or \
+           services_created is False:
+            self._tidy_up_failed_deploy()
+            return None, None, None
         return self.services, self.networks, self.volumes
 
     def remove(self) -> None:
@@ -86,20 +95,28 @@ class Stack(object):
         ))
         return svcs
 
-    def _create_networks(self) -> None:
+    def _create_networks(self) -> bool:
         """
         Creates networks required by the Stack, it also checks if a service
         does not have networks associated to it. If so it will create a
         'default_{stack_name}' network for that service.
         This function also checks if the network is external and if it exists.
+
+        Return value is True for success, False for failure.
         """
         self.networks = list(map(
             lambda nt: self._check_if_network_is_external(nt),
             self.network_dict.items()
         ))
+
+        return_val = True
+
         for net in self.networks:
             if isinstance(net, Network):
-                net.create(self.client)
+                if net.create(self.client) is False:
+                    return_val = False
+
+        return return_val
 
     def _check_if_network_is_external(self, net_tuple: Tuple):
         net_name, net_attrs = net_tuple
@@ -128,7 +145,7 @@ class Stack(object):
         default_net.create(self.client)
         self.networks.append(default_net)
 
-    def _create_volumes(self) -> None:
+    def _create_volumes(self) -> bool:
         """
         Creates volumes required by the Stack.
         This function also checks if the volume is external and if it exists.
@@ -138,9 +155,15 @@ class Stack(object):
             lambda vl: self._check_if_volume_is_external(vl),
             self.volume_dict.items()
         ))
+
+        return_val = True
+
         for vol in self.volumes:
             if isinstance(vol, Volume):
-                vol.create(self.client)
+                if vol.create(self.client) is False:
+                    return_val = False
+
+        return return_val
 
     def _check_if_volume_is_external(self, vol_tuple: Tuple):
         vol_name, vol_attrs = vol_tuple
@@ -157,7 +180,7 @@ class Stack(object):
             )
         return vol_name
 
-    def _create_services(self) -> None:
+    def _create_services(self) -> bool:
 
         self._check_stack_service_attributes()
 
@@ -165,9 +188,19 @@ class Stack(object):
             lambda sc: self._create_svc_from_tuple(sc),
             self.service_dict.items()
         ))
+
+        return_val = True
+
         for svc in self.services:
             if isinstance(svc, Service):
-                svc.create(self.client)
+                try:
+                    if not svc.create(self.client):
+                        return_val = False
+                except APIError:
+                    # should add some logging here...
+                    return_val = False
+
+        return return_val
 
     def _check_stack_service_attributes(self) -> None:
         for svc_name, svc_attrs in self.service_dict.items():
@@ -308,3 +341,34 @@ class Stack(object):
                 svc_attrs.get('Mode').get('Replicated').get('Replicas')
             )
         )
+
+    def _tidy_up_failed_deploy(self) -> None:
+        # print("Should be tidying up here...")
+        self._tidy_up_services()
+        self._tidy_up_volumes()
+        self._tidy_up_networks()
+
+    def _tidy_up_networks(self) -> None:
+        print("Removing networks: {0}".format(self.networks))
+        for n in self.networks:
+            if isinstance(n, Network):
+                n.remove(self.client)
+        pass
+
+    def _tidy_up_volumes(self) -> None:
+        logger.debug("Removing volumes: {0}".format(self.volumes))
+        for v in self.volumes:
+            if isinstance(v, Volume):
+                v.remove(self.client)
+            else:
+                remove_volume(v, self.client)
+        pass
+
+    def _tidy_up_services(self) -> None:
+        logger.debug("Removing services: {0}".format(self.services))
+        for s in self.services:
+            if isinstance(s, Service):
+                try:
+                    s.remove(self.client)
+                except APIError as err:
+                    logger.info("Error removing service - error msg: {0}".format(err))
