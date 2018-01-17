@@ -132,8 +132,22 @@ class Service(object):
             filters = {'name': self.name}
             service_list = client.services.list(filters=filters)
             # add logic to handle case in which no service is found...
-            service_list[0].remove()
-            return True
+            if len(service_list) == 1:
+                # this should be the default case
+                service_list[0].remove()
+                return True
+            if len(service_list) == 0:
+                # there are no instances of a service with this name
+                # this should probably be handled a priori - before we do a remove 
+                return True
+            if len(service_list) > 1:
+                # there are no instances of a service with this name
+                # this should probably be handled a priori - before we do a remove 
+                logging.warn("More than one service matching name \
+                    filter {0} found - removing first one".format(self.name))
+                service_list[0].remove()
+                return True
+
         except APIError as err:
             # TODO(murp): need to perform more intelligent error handling here.
             logger.info("Error removing service {0} - err msg: {1}"

@@ -5,6 +5,9 @@ import connexion
 import logging.config
 import os
 
+# Port on which this application runs
+PORT=8081
+
 app = connexion.App(__name__, specification_dir='./swagger/')
 app.add_api('swagger.yaml', arguments={'title': ''})
 
@@ -29,11 +32,35 @@ def file_exists(filename: str) -> bool:
     return os.path.isfile(filename)
 
 
+def app_gunicorn_entry(log_config_file: str, log_level: int) -> connexion.App:
+
+    try:
+        logging.config.fileConfig(log_config_file)
+    except Exception as err:
+        print("Error reading log configuration file; unable to configure logging...exiting...")
+        exit(1)
+
+    logging.getLogger().setLevel(log_level)
+
+    return app
+
+
+def run_application(port: int, log_config_file: str, log_level: int) -> None:
+    '''This is an alternative entry point which is intended for use by gunicorn -
+    it is assumed that the input parameters are validated prior to entry'''
+
+    try:
+        logging.config.fileConfig(log_config_file)
+    except Exception as err:
+        print("Error reading log configuration file; unable to configure logging...exiting...")
+        exit(1)
+
+    logging.getLogger().setLevel(log_level)
+
+    app.run(port)
+
+
 def main():
-    app.run(port=8081)
-
-
-if __name__ == '__main__':
     parser = argparse.ArgumentParser('Mastermind Service Manager API')
     parser.add_argument('log_file', nargs=1, metavar='log-file',
                         help='filename of logging configuration')
@@ -53,12 +80,8 @@ if __name__ == '__main__':
         print("Unable to find log configuration file...exiting...")
         exit(1)
 
-    try:
-        logging.config.fileConfig(args.log_file[0])
-    except Exception as err:
-        print("Unable to configure logging...exiting...")
-        exit(1)
+    run_application(PORT, args.log_file[0], log_level)
 
-    logging.getLogger().setLevel(log_level)
 
+if __name__ == '__main__':
     main()
