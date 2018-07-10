@@ -296,11 +296,30 @@ class Service(object):
                 label_dict.update(lb)
             self.container_labels.update(label_dict)
 
+    def _parse_label(self, l: str) -> (str, str):
+        """
+        This function parses a label into a k, v pair using '=' as the split
+        character. If there are more than 1 '=' in the given string, a warning
+        is logged and the first two elements are returned.
+        """
+        fields = l.split('=')
+        if len(fields) == 1:
+            return fields[0], None
+        if len(fields) > 2:
+            logging.warn('Too many "=" separators in label {0} - parsing only first two fields'.format(l))
+        return fields[0], fields[1]
+
     def _service_labels(self, labels):
         """
         Adds the contents of deploy[labels] to service_labels.
         """
-        self.service_labels.update(labels)
+        if len(labels) == 0:
+            return
+
+        for l in labels:
+            k, v = self._parse_label(l)
+            print('Key = {0}, val = {1}'.format(k, v))
+            self.service_labels.update({k: v})
 
     def _service_healthcheck(self):
         """

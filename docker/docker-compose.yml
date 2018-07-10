@@ -1,0 +1,16 @@
+# Docker-compose file for the mastermind service manager
+# Primary purpose here is to control the build process.
+
+version: '3'
+
+services:
+  mastermind-servicemanager:
+    build:
+      context: build
+      dockerfile: Dockerfile.servicemanager
+    image: icclab/mastermind-service-manager
+    ports:
+      - 8081:8080
+
+
+

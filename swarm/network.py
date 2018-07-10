@@ -30,7 +30,7 @@ class Network(object):
             self,
             name,
             stack_name=None,
-            driver=None,
+            driver="overlay",
             external=False,
             check_duplicate=True,
             driver_opts=None,
@@ -38,6 +38,7 @@ class Network(object):
             internal=False,
             labels=None,
             enable_ipv6=False,
+            scope='swarm',
             **options
     ):
         self.name = name
@@ -50,6 +51,7 @@ class Network(object):
         self.internal = internal
         self.labels = labels or {}
         self.enable_ipv6 = enable_ipv6
+        self.scope = scope
         self.options = options
 
         self._initialize_network()
@@ -65,7 +67,8 @@ class Network(object):
                                    ipam=self.ipam,
                                    check_duplicate=self.check_duplicate,
                                    internal=self.internal,
-                                   labels=self.labels)
+                                   labels=self.labels,
+                                   scope=self.scope)
             return True, None
         except Exception as err:
             logger.info("Error creating network {0} - error message: {1}"
