@@ -6,6 +6,7 @@ import swagger_client
 from swagger_client.rest import ApiException
 # from swagger_client.configuration import Configuration
 # from pprint import pprint
+import time
 
 # set up variables...a bit too global but that's ok
 # for a small test file.
@@ -17,7 +18,8 @@ engine_url = 'tcp://160.85.2.17:2376'
 ca_cert_file = '../../client/secure-docker-socket/ca.pem'
 cert_file = '../../client/secure-docker-socket/cert.pem'
 cert_key_file = '../../client/secure-docker-socket/key.pem'
-compose_filename = 'quantum-leap/docker-compose.yml'
+# compose_filename = 'quantum-leap/docker-compose.yml'
+compose_filename = 'mkguid/docker-compose.yml'
 
 
 def read_file(filename: str) -> str:
@@ -73,16 +75,27 @@ def delete_network(network_api_instance, network):
         print("Exception when calling NetworkAPI->create_network: %s\n" % e)
 
 
+def get_stack_status(stack_api_instance, name, stack):
+    try:
+        # Create a stack with the given name
+        return_val = stack_api_instance.get_stack(name, stack)
+        print('get_stack_status: Return value: {0}'.format(return_val))
+
+    except ApiException as e:
+        print("Exception when calling StackAPI->deploy_stack: %s\n" % e)
+
+
 def main():
 
     ca_cert = read_file(ca_cert_file)
     cert = read_file(cert_file)
     cert_key = read_file(cert_key_file)
     compose_file = read_file(compose_filename)
-    stack_name = 'test-stack'
+    stack_name = 'test-stacker'
     network_name = 'frontend'
 
-    network_api_instance = swagger_client.NetworkApi(swagger_client.ApiClient(configuration))
+    network_api_instance = \
+        swagger_client.NetworkApi(swagger_client.ApiClient(configuration))
     # Network | Definition of network to be created
     network = swagger_client.Network(engine_url=engine_url,
                                      ca_cert=ca_cert, cert=cert,
@@ -90,7 +103,8 @@ def main():
                                      name=network_name)
 
     # create an instance of the API class
-    stack_api_instance = swagger_client.StackApi(swagger_client.ApiClient(configuration))
+    stack_api_instance = \
+        swagger_client.StackApi(swagger_client.ApiClient(configuration))
     # stack | Definition of stack to be created
     stack = swagger_client.Stack(engine_url=engine_url,
                                  ca_cert=ca_cert, cert=cert,
@@ -102,8 +116,10 @@ def main():
 
     create_network(network_api_instance, network)
     create_stack(stack_api_instance, stack)
-    delete_stack(stack_api_instance, stack_name, stack)
-    delete_network(network_api_instance, network)
+    time.sleep(45)
+    get_stack_status(stack_api_instance, stack_name, stack)
+    # delete_stack(stack_api_instance, stack_name, stack)
+    # delete_network(network_api_instance, network)
 
 
 if __name__ == '__main__':

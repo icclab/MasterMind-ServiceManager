@@ -12,278 +12,305 @@ info:
 host: "127.0.0.1:8080"
 basePath: "/v1"
 schemes:
-- "http"
+  - "http"
 paths:
   /swarm:
     post:
       tags:
-      - "Swarm"
+        - "Swarm"
       summary: "Get swarm status"
       description: ""
       operationId: "swarm_status"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "swarm"
-        description: "Get Swarm"
-        required: true
-        schema:
-          $ref: "#/definitions/Swarm"
+        - in: "body"
+          name: "swarm"
+          description: "Get Swarm"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Swarm"
+        - tag: "Swarm"
       x-swagger-router-controller: "api.controllers.swarm_controller"
   /stack:
     post:
       tags:
-      - "Stack"
+        - "Stack"
       summary: "Deploy a new stack"
       description: ""
       operationId: "deploy_stack"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "stack"
-        description: "Create a Stack"
-        required: true
-        schema:
-          $ref: "#/definitions/Stack"
+        - in: "body"
+          name: "stack"
+          description: "Create a Stack"
+          required: true
+          schema:
+            $ref: "#/definitions/Stack"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Stack"
+        - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
   /stack/{name}:
     post:
       tags:
-      - "Stack"
+        - "Stack"
       summary: "Get the list of services of a stack"
       description: "Get a list of all services of a stack"
       operationId: "get_stack"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "name"
-        in: "path"
-        description: ""
-        required: true
-        type: "string"
-      - in: "body"
-        name: "stack"
-        description: ""
-        required: true
-        schema:
-          $ref: "#/definitions/Stack"
+        - name: "name"
+          in: "path"
+          description: ""
+          required: true
+          type: "string"
+        - in: "body"
+          name: "stack"
+          description: ""
+          required: true
+          schema:
+            $ref: "#/definitions/Stack"
       responses:
         200:
           description: "Successfully retrieved services"
       x-tags:
-      - tag: "Stack"
+        - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
   /stack/delete/{name}:
     post:
       tags:
-      - "Stack"
+        - "Stack"
       summary: "Delete services of a stack"
       description: "Delete services of a stack"
       operationId: "delete_stack"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "name"
-        in: "path"
-        description: ""
-        required: true
-        type: "string"
-      - in: "body"
-        name: "stack"
-        description: ""
-        required: true
-        schema:
-          $ref: "#/definitions/Stack"
+        - name: "name"
+          in: "path"
+          description: ""
+          required: true
+          type: "string"
+        - in: "body"
+          name: "stack"
+          description: ""
+          required: true
+          schema:
+            $ref: "#/definitions/Stack"
       responses:
         200:
           description: "Successfully deleted services"
       x-tags:
-      - tag: "Stack"
+        - tag: "Stack"
       x-swagger-router-controller: "api.controllers.stack_controller"
-
+  #   /stack/Healthcheck/{name}:
+  #     post:
+  #       tags:
+  #         - "Stack"
+  #       summary: "Check health of a stack"
+  #       description: "Check health of a stack"
+  #       operationId: "stack_health"
+  #       produces:
+  #         - "application/json"
+  #       parameters:
+  #         - name: "name"
+  #           in: "path"
+  #           description: ""
+  #           required: true
+  #           type: "string"
+  #         - in: "body"
+  #           name: "stack"
+  #           description: ""
+  #           required: true
+  #           schema:
+  #             $ref: "#/definitions/Stack"
+  #       responses:
+  #         200:
+  #           description: "Health obtained successfully"
+  #         404:
+  #           description: "Stack not found"
+  #       x-tags:
+  #         - tag: "Stack"
+  #       x-swagger-router-controller: "api.controllers.stack_controller"
+  #
   /network:
     get:
       tags:
-      - "Network"
+        - "Network"
       summary: "Obtain a list of defined networks"
       description: ""
       operationId: "get_networks"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "swarm"
-        description: "Swarm which is being queried for networks"
-        required: true
-        schema:
-          $ref: "#/definitions/Swarm"
+        - in: "body"
+          name: "swarm"
+          description: "Swarm which is being queried for networks"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Network"
+        - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
     post:
       tags:
-      - "Network"
+        - "Network"
       summary: "Create a network with the given name"
       description: ""
       operationId: "create_network"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      # - name: "swarm"
-      #   in: "body"
-      #   description: "Swarm on which network will be created"
-      #   required: true
-      #   schema:
-      #     $ref: "#/definitions/Swarm"
-      - name: "network"
-        in: "body"
-        description: "Definition of network to be created"
-        required: true
-        schema:
-          $ref: "#/definitions/Network"
-
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
+        - name: "network"
+          in: "body"
+          description: "Definition of network to be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Network"
       responses:
         201:
           description: "OK"
       x-tags:
-      - tag: "Network"
+        - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
 
   /network/delete:
     delete:
       tags:
-      - "Network"
+        - "Network"
       summary: "Remove network with given name"
       description: ""
       operationId: "delete_network"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      # - name: "swarm"
-      #   in: "body"
-      #   description: "Swarm on which network will be created"
-      #   required: true
-      #   schema:
-      #     $ref: "#/definitions/Swarm"
-      - name: "network"
-        in: "body"
-        description: "Network to be removed"
-        required: true
-        schema:
-          $ref: "#/definitions/Network"
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
+        - name: "network"
+          in: "body"
+          description: "Network to be removed"
+          required: true
+          schema:
+            $ref: "#/definitions/Network"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Network"
+        - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
 
 
   /volume:
     get:
       tags:
-      - "Volume"
+        - "Volume"
       summary: "Obtain a list of defined volumes"
       description: ""
       operationId: "get_volumes"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "swarm"
-        description: "Swarm which is being queried for volumes"
-        required: true
-        schema:
-          $ref: "#/definitions/Swarm"
+        - in: "body"
+          name: "swarm"
+          description: "Swarm which is being queried for volumes"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Network"
+        - tag: "Network"
       x-swagger-router-controller: "api.controllers.volume_controller"
     post:
       tags:
-      - "Volume"
+        - "Volume"
       summary: "Create a volume with the given name"
       description: ""
       operationId: "create_volume"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      # - name: "swarm"
-      #   in: "body"
-      #   description: "Swarm on which network will be created"
-      #   required: true
-      #   schema:
-      #     $ref: "#/definitions/Swarm"
-      - name: "volume"
-        in: "body"
-        description: "Definition of volume to be created"
-        required: true
-        schema:
-          $ref: "#/definitions/Volume"
-
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
+        - name: "volume"
+          in: "body"
+          description: "Definition of volume to be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Volume"
       responses:
         201:
           description: "OK"
       x-tags:
-      - tag: "Volume"
+        - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
 
   /volume/delete:
     delete:
       tags:
-      - "Volume"
+        - "Volume"
       summary: "Remove volume with given name"
       description: ""
       operationId: "delete_volume"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      # - name: "swarm"
-      #   in: "body"
-      #   description: "Swarm on which network will be created"
-      #   required: true
-      #   schema:
-      #     $ref: "#/definitions/Swarm"
-      - name: "volume"
-        in: "body"
-        description: "Volume to be removed"
-        required: true
-        schema:
-          $ref: "#/definitions/Volume"
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
+        - name: "volume"
+          in: "body"
+          description: "Volume to be removed"
+          required: true
+          schema:
+            $ref: "#/definitions/Volume"
       responses:
         200:
           description: "OK"
       x-tags:
-      - tag: "Volume"
+        - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
 
 
@@ -291,8 +318,8 @@ definitions:
   Stack:
     type: "object"
     required:
-    - "engine-url"
-    - "name"
+      - "engine-url"
+      - "name"
     properties:
       name:
         type: "string"
@@ -316,7 +343,7 @@ definitions:
   Swarm:
     type: "object"
     required:
-    - "engine-url"
+      - "engine-url"
     properties:
       engine-url:
         type: "string"
@@ -329,8 +356,8 @@ definitions:
   Network:
     type: "object"
     required:
-    - "engine-url"
-    - "name"
+      - "engine-url"
+      - "name"
     properties:
       engine-url:
         type: "string"
@@ -346,8 +373,8 @@ definitions:
   Volume:
     type: "object"
     required:
-    - "engine-url"
-    - "name"
+      - "engine-url"
+      - "name"
     properties:
       engine-url:
         type: "string"
@@ -359,5 +386,3 @@ definitions:
         type: "string"
       name:
         type: "string"
-
-

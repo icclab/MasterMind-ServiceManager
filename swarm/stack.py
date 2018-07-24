@@ -337,23 +337,44 @@ class Stack(object):
         filter_lbl = 'com.docker.stack.namespace={0}'.format(self.stack_name)
         return self.client.networks.list(filters={'label': filter_lbl})
 
-    @staticmethod
-    def _filter_service_info(svc: services.Service) -> Dict:
+    # @staticmethod
+    def _filter_service_info(self, svc: services.Service) -> Dict:
         svc_attrs = svc.attrs.get('Spec')
+        print('Attributes for service {0}: {1}'.format(svc.name, str(svc_attrs)))
         service_tasks = svc.tasks()
+        print('service_tasks = {0}'.format(str(service_tasks)))
         service_running_tasks = list(
             filter(
                 lambda tsk: tsk.get('Status').get('State') == 'running',
                 service_tasks
             )
         )
-        return dict(
+        print('service_running_task = {0}'.format(str(service_running_tasks)))
+        health_array = []
+        for t in service_running_tasks:
+            print('service task state = {0}'.format(str(t.get('Status').get('ContainerStatus'))))
+            container_status = t.get('Status').get('ContainerStatus')
+            container_id = container_status.get('ContainerID')
+            inspect_data = self.client.api.inspect_container(container_id)
+            print('inspect data = {0}'.format(str(inspect_data)))
+            # all containers should have some State
+            container_state = inspect_data.get('State')
+            health_status = ''
+            if container_state.get('Health') is not None:
+                health_status = container_state.get('Health').get('Status')
+            print('health_status = {0}'.format(health_status))
+            health_array.append({'ContainerID': container_id, 'Health': health_status})
+
+        return_val = dict(
             name=svc_attrs.get('Name'),
             status='{0}/{1}'.format(
                 len(service_running_tasks),
                 svc_attrs.get('Mode').get('Replicated').get('Replicas')
-            )
+            ),
+            health=health_array
         )
+        print('return_val = {0}'.format(str(return_val)))
+        return return_val
 
     def _tidy_up_failed_deploy(self) -> None:
         # print("Should be tidying up here...")

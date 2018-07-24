@@ -154,6 +154,34 @@ def delete_stack(name: str, stack: Dict) -> Tuple[Dict, int]:
     return response(200, "Stack {0} deleted.".format(name))
 
 
+def stack_health(name: str, stack: Dict) -> Tuple[Dict, int]:
+    """
+    POST /v1/stack/Healthcheck/{name}
+    POST method to obtain the health status of a given stack. This design should 
+    probably be reconsidered.
+    """
+
+    temp_files = dict()
+    stack = Stack.from_dict(connexion.request.get_json())
+    try:
+        temp_files = create_temp_files(stack.ca_cert,
+                                       stack.cert,
+                                       stack.cert_key)
+        cli = get_client(stack.engine_url, tls=temp_files)
+        stack_obj = StackCls(stack_name=name, client=cli)
+        # stack_obj.remove()
+        # we need to iterate over all containers in the stack
+        
+        container_status = inspect_container()
+    except ConnectionError:
+        return response(400, "Connection error, "
+                             "please check if the Docker engine is reachable.")
+    finally:
+        if temp_files:
+            close_temp_files(temp_files)
+    return response(200, "Stack {0} health OK.".format(name))
+
+
 def get_client(engine_url: str, tls: Dict=None):
     """
     Creates a DockerClient in order to talk with the Docker engine.
