@@ -48,8 +48,7 @@ class NetworkApi(object):
                  If the method is called asynchronously,
                  returns the request thread.
         """
-        # kwargs['_return_http_data_only'] = True
-        kwargs['_return_http_data_only'] = False
+        kwargs['_return_http_data_only'] = True
         if kwargs.get('async'):
             return self.create_network_with_http_info(network, **kwargs)  # noqa: E501
         else:
@@ -119,6 +118,107 @@ class NetworkApi(object):
 
         return self.api_client.call_api(
             '/network', 'POST',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type=None,  # noqa: E501
+            auth_settings=auth_settings,
+            async=params.get('async'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def create_network_0(self, swarm, network, **kwargs):  # noqa: E501
+        """Create a network with a given name  # noqa: E501
+
+          # noqa: E501
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async=True
+        >>> thread = api.create_network_0(swarm, network, async=True)
+        >>> result = thread.get()
+
+        :param async bool
+        :param Swarm swarm: Swarm on which network will be created (required)
+        :param Network network: Network to be created (required)
+        :return: None
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async'):
+            return self.create_network_0_with_http_info(swarm, network, **kwargs)  # noqa: E501
+        else:
+            (data) = self.create_network_0_with_http_info(swarm, network, **kwargs)  # noqa: E501
+            return data
+
+    def create_network_0_with_http_info(self, swarm, network, **kwargs):  # noqa: E501
+        """Create a network with a given name  # noqa: E501
+
+          # noqa: E501
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async=True
+        >>> thread = api.create_network_0_with_http_info(swarm, network, async=True)
+        >>> result = thread.get()
+
+        :param async bool
+        :param Swarm swarm: Swarm on which network will be created (required)
+        :param Network network: Network to be created (required)
+        :return: None
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+
+        all_params = ['swarm', 'network']  # noqa: E501
+        all_params.append('async')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method create_network_0" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        # verify the required parameter 'swarm' is set
+        if ('swarm' not in params or
+                params['swarm'] is None):
+            raise ValueError("Missing the required parameter `swarm` when calling `create_network_0`")  # noqa: E501
+        # verify the required parameter 'network' is set
+        if ('network' not in params or
+                params['network'] is None):
+            raise ValueError("Missing the required parameter `network` when calling `create_network_0`")  # noqa: E501
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        if 'network' in params:
+            body_params = params['network']
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['application/json'])  # noqa: E501
+
+        # Authentication setting
+        auth_settings = []  # noqa: E501
+
+        return self.api_client.call_api(
+            '/create_network', 'POST',
             path_params,
             query_params,
             header_params,
@@ -313,6 +413,101 @@ class NetworkApi(object):
 
         return self.api_client.call_api(
             '/network', 'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type=None,  # noqa: E501
+            auth_settings=auth_settings,
+            async=params.get('async'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def get_networks_0(self, swarm, **kwargs):  # noqa: E501
+        """Get a list of networks from a swarm  # noqa: E501
+
+          # noqa: E501
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async=True
+        >>> thread = api.get_networks_0(swarm, async=True)
+        >>> result = thread.get()
+
+        :param async bool
+        :param Swarm swarm: Swarm on which network will be created (required)
+        :return: None
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        kwargs['_return_http_data_only'] = True
+        if kwargs.get('async'):
+            return self.get_networks_0_with_http_info(swarm, **kwargs)  # noqa: E501
+        else:
+            (data) = self.get_networks_0_with_http_info(swarm, **kwargs)  # noqa: E501
+            return data
+
+    def get_networks_0_with_http_info(self, swarm, **kwargs):  # noqa: E501
+        """Get a list of networks from a swarm  # noqa: E501
+
+          # noqa: E501
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async=True
+        >>> thread = api.get_networks_0_with_http_info(swarm, async=True)
+        >>> result = thread.get()
+
+        :param async bool
+        :param Swarm swarm: Swarm on which network will be created (required)
+        :return: None
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+
+        all_params = ['swarm']  # noqa: E501
+        all_params.append('async')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method get_networks_0" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        # verify the required parameter 'swarm' is set
+        if ('swarm' not in params or
+                params['swarm'] is None):
+            raise ValueError("Missing the required parameter `swarm` when calling `get_networks_0`")  # noqa: E501
+
+        collection_formats = {}
+
+        path_params = {}
+
+        query_params = []
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        if 'swarm' in params:
+            body_params = params['swarm']
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['application/json'])  # noqa: E501
+
+        # Authentication setting
+        auth_settings = []  # noqa: E501
+
+        return self.api_client.call_api(
+            '/get_networks', 'POST',
             path_params,
             query_params,
             header_params,

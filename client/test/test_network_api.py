@@ -36,6 +36,13 @@ class TestNetworkApi(unittest.TestCase):
         """
         pass
 
+    def test_create_network_0(self):
+        """Test case for create_network_0
+
+        Create a network with a given name  # noqa: E501
+        """
+        pass
+
     def test_delete_network(self):
         """Test case for delete_network
 
@@ -47,6 +54,13 @@ class TestNetworkApi(unittest.TestCase):
         """Test case for get_networks
 
         Obtain a list of defined networks  # noqa: E501
+        """
+        pass
+
+    def test_get_networks_0(self):
+        """Test case for get_networks_0
+
+        Get a list of networks from a swarm  # noqa: E501
         """
         pass
 

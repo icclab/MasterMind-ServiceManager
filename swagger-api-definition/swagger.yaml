@@ -152,7 +152,7 @@ paths:
         - "Network"
       summary: "Obtain a list of defined networks"
       description: ""
-      operationId: "get_networks"
+      operationId: "get_networks_1"
       consumes:
         - "application/json"
       produces:
@@ -175,7 +175,7 @@ paths:
         - "Network"
       summary: "Create a network with the given name"
       description: ""
-      operationId: "create_network"
+      operationId: "create_network_1"
       consumes:
         - "application/json"
       produces:
@@ -247,15 +247,15 @@ paths:
           required: true
           schema:
             $ref: "#/definitions/Swarm"
-        #         - name: "network"
-        #           in: "body"
-        #           description: "Network to be removed"
-        #           required: true
-        #           schema:
-        #             $ref: "#/definitions/Network"
-        #       responses:
-      200:
-        description: "OK"
+      #         - name: "network"
+      #           in: "body"
+      #           description: "Network to be removed"
+      #           required: true
+      #           schema:
+      #             $ref: "#/definitions/Network"
+      responses:
+        200:
+          description: "OK"
       x-tags:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
@@ -272,12 +272,12 @@ paths:
       produces:
         - "application/json"
       parameters:
-        - name: "swarm"
-          in: "body"
-          description: "Swarm on which network will be created"
-          required: true
-          schema:
-            $ref: "#/definitions/Swarm"
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
         - name: "network"
           in: "body"
           description: "Network to be created"
