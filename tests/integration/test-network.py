@@ -23,9 +23,9 @@ configuration.host = 'http://127.0.0.1:8081/v1'
 
 # engine_url='tcp://160.85.2.17:2376'
 engine_url='tcp://160.85.2.17:2376'
-ca_cert_file='../../client/secure-docker-socket/ca.pem'
-cert_file='../../client/secure-docker-socket/cert.pem'
-cert_key_file='../../client/secure-docker-socket/key.pem'
+ca_cert_file='../../../client/secure-docker-socket/ca.pem'
+cert_file='../../../client/secure-docker-socket/cert.pem'
+cert_key_file='../../../client/secure-docker-socket/key.pem'
 network_name='network_name2'
 
 ca_cert = read_file(ca_cert_file)

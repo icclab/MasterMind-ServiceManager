@@ -132,17 +132,16 @@ class NetworkApi(object):
             _request_timeout=params.get('_request_timeout'),
             collection_formats=collection_formats)
 
-    def create_network_0(self, swarm, network, **kwargs):  # noqa: E501
+    def create_network_alternative(self, network, **kwargs):  # noqa: E501
         """Create a network with a given name  # noqa: E501
 
           # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async=True
-        >>> thread = api.create_network_0(swarm, network, async=True)
+        >>> thread = api.create_network_alternative(network, async=True)
         >>> result = thread.get()
 
         :param async bool
-        :param Swarm swarm: Swarm on which network will be created (required)
         :param Network network: Network to be created (required)
         :return: None
                  If the method is called asynchronously,
@@ -150,29 +149,28 @@ class NetworkApi(object):
         """
         kwargs['_return_http_data_only'] = True
         if kwargs.get('async'):
-            return self.create_network_0_with_http_info(swarm, network, **kwargs)  # noqa: E501
+            return self.create_network_alternative_with_http_info(network, **kwargs)  # noqa: E501
         else:
-            (data) = self.create_network_0_with_http_info(swarm, network, **kwargs)  # noqa: E501
+            (data) = self.create_network_alternative_with_http_info(network, **kwargs)  # noqa: E501
             return data
 
-    def create_network_0_with_http_info(self, swarm, network, **kwargs):  # noqa: E501
+    def create_network_alternative_with_http_info(self, network, **kwargs):  # noqa: E501
         """Create a network with a given name  # noqa: E501
 
           # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async=True
-        >>> thread = api.create_network_0_with_http_info(swarm, network, async=True)
+        >>> thread = api.create_network_alternative_with_http_info(network, async=True)
         >>> result = thread.get()
 
         :param async bool
-        :param Swarm swarm: Swarm on which network will be created (required)
         :param Network network: Network to be created (required)
         :return: None
                  If the method is called asynchronously,
                  returns the request thread.
         """
 
-        all_params = ['swarm', 'network']  # noqa: E501
+        all_params = ['network']  # noqa: E501
         all_params.append('async')
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
@@ -183,18 +181,14 @@ class NetworkApi(object):
             if key not in all_params:
                 raise TypeError(
                     "Got an unexpected keyword argument '%s'"
-                    " to method create_network_0" % key
+                    " to method create_network_alternative" % key
                 )
             params[key] = val
         del params['kwargs']
-        # verify the required parameter 'swarm' is set
-        if ('swarm' not in params or
-                params['swarm'] is None):
-            raise ValueError("Missing the required parameter `swarm` when calling `create_network_0`")  # noqa: E501
         # verify the required parameter 'network' is set
         if ('network' not in params or
                 params['network'] is None):
-            raise ValueError("Missing the required parameter `network` when calling `create_network_0`")  # noqa: E501
+            raise ValueError("Missing the required parameter `network` when calling `create_network_alternative`")  # noqa: E501
 
         collection_formats = {}
 
@@ -427,13 +421,13 @@ class NetworkApi(object):
             _request_timeout=params.get('_request_timeout'),
             collection_formats=collection_formats)
 
-    def get_networks_0(self, swarm, **kwargs):  # noqa: E501
+    def get_networks_alternative(self, swarm, **kwargs):  # noqa: E501
         """Get a list of networks from a swarm  # noqa: E501
 
           # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async=True
-        >>> thread = api.get_networks_0(swarm, async=True)
+        >>> thread = api.get_networks_alternative(swarm, async=True)
         >>> result = thread.get()
 
         :param async bool
@@ -444,18 +438,18 @@ class NetworkApi(object):
         """
         kwargs['_return_http_data_only'] = True
         if kwargs.get('async'):
-            return self.get_networks_0_with_http_info(swarm, **kwargs)  # noqa: E501
+            return self.get_networks_alternative_with_http_info(swarm, **kwargs)  # noqa: E501
         else:
-            (data) = self.get_networks_0_with_http_info(swarm, **kwargs)  # noqa: E501
+            (data) = self.get_networks_alternative_with_http_info(swarm, **kwargs)  # noqa: E501
             return data
 
-    def get_networks_0_with_http_info(self, swarm, **kwargs):  # noqa: E501
+    def get_networks_alternative_with_http_info(self, swarm, **kwargs):  # noqa: E501
         """Get a list of networks from a swarm  # noqa: E501
 
           # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async=True
-        >>> thread = api.get_networks_0_with_http_info(swarm, async=True)
+        >>> thread = api.get_networks_alternative_with_http_info(swarm, async=True)
         >>> result = thread.get()
 
         :param async bool
@@ -476,14 +470,14 @@ class NetworkApi(object):
             if key not in all_params:
                 raise TypeError(
                     "Got an unexpected keyword argument '%s'"
-                    " to method get_networks_0" % key
+                    " to method get_networks_alternative" % key
                 )
             params[key] = val
         del params['kwargs']
         # verify the required parameter 'swarm' is set
         if ('swarm' not in params or
                 params['swarm'] is None):
-            raise ValueError("Missing the required parameter `swarm` when calling `get_networks_0`")  # noqa: E501
+            raise ValueError("Missing the required parameter `swarm` when calling `get_networks_alternative`")  # noqa: E501
 
         collection_formats = {}
 

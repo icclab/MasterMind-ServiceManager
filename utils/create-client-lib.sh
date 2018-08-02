@@ -1,5 +1,15 @@
 #! /usr/bin/env bash
 
+usage() {
+  echo "Usage: $0 <full path to swagger.yaml>"
+}
+
+if [ $# -ne 1 ]
+then
+  usage
+  exit 1
+fi
+
 swagger_input=$1
 
 cd /tmp
@@ -29,3 +39,10 @@ cd ..
 mkdir output-client
 cp -R swagger-codegen/output-client/* output-client
 
+echo
+echo
+echo "Created new output client files...in directory /tmp/$dirname/output-client"
+echo
+echo 'This might work: cp -r /tmp/$dirname/output-client/* client'
+echo
+echo "Copy these to the client directory within this repo..."

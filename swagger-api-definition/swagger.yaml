@@ -152,7 +152,7 @@ paths:
         - "Network"
       summary: "Obtain a list of defined networks"
       description: ""
-      operationId: "get_networks_1"
+      operationId: "get_networks"
       consumes:
         - "application/json"
       produces:
@@ -175,7 +175,7 @@ paths:
         - "Network"
       summary: "Create a network with the given name"
       description: ""
-      operationId: "create_network_1"
+      operationId: "create_network"
       consumes:
         - "application/json"
       produces:
@@ -237,7 +237,7 @@ paths:
         - "Network"
       summary: "Get a list of networks from a swarm"
       description: ""
-      operationId: "get_networks"
+      operationId: "get_networks_alternative"
       produces:
         - "application/json"
       parameters:
@@ -268,7 +268,7 @@ paths:
         - "Network"
       summary: "Create a network with a given name"
       description: ""
-      operationId: "create_network"
+      operationId: "create_network_alternative"
       produces:
         - "application/json"
       parameters:

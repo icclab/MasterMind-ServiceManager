@@ -12,7 +12,7 @@ from docker.errors import APIError
 from requests.exceptions import ConnectionError
 
 
-def get_networks_1(swarm):
+def get_networks_alternative(swarm):
     """
     GET /v1/network/
     """
@@ -47,10 +47,10 @@ def get_networks(swarm):
     finally:
         if temp_files:
             close_temp_files(temp_files)
-    return response(200, "", json.dumps(networks))
+    return response(200, "", {'networks': json.dumps(networks[1])})
 
 
-def create_network_1(network):
+def create_network_alternative(network):
     return create_network(network)
 
 

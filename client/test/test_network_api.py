@@ -36,8 +36,8 @@ class TestNetworkApi(unittest.TestCase):
         """
         pass
 
-    def test_create_network_0(self):
-        """Test case for create_network_0
+    def test_create_network_alternative(self):
+        """Test case for create_network_alternative
 
         Create a network with a given name  # noqa: E501
         """
@@ -57,8 +57,8 @@ class TestNetworkApi(unittest.TestCase):
         """
         pass
 
-    def test_get_networks_0(self):
-        """Test case for get_networks_0
+    def test_get_networks_alternative(self):
+        """Test case for get_networks_alternative
 
         Get a list of networks from a swarm  # noqa: E501
         """

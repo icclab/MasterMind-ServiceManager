@@ -70,10 +70,10 @@ All URIs are relative to *http://127.0.0.1:8080/v1*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *NetworkApi* | [**create_network**](docs/NetworkApi.md#create_network) | **POST** /network | Create a network with the given name
-*NetworkApi* | [**create_network_0**](docs/NetworkApi.md#create_network_0) | **POST** /create_network | Create a network with a given name
+*NetworkApi* | [**create_network_alternative**](docs/NetworkApi.md#create_network_alternative) | **POST** /create_network | Create a network with a given name
 *NetworkApi* | [**delete_network**](docs/NetworkApi.md#delete_network) | **DELETE** /network/delete | Remove network with given name
 *NetworkApi* | [**get_networks**](docs/NetworkApi.md#get_networks) | **GET** /network | Obtain a list of defined networks
-*NetworkApi* | [**get_networks_0**](docs/NetworkApi.md#get_networks_0) | **POST** /get_networks | Get a list of networks from a swarm
+*NetworkApi* | [**get_networks_alternative**](docs/NetworkApi.md#get_networks_alternative) | **POST** /get_networks | Get a list of networks from a swarm
 *StackApi* | [**delete_stack**](docs/StackApi.md#delete_stack) | **POST** /stack/delete/{name} | Delete services of a stack
 *StackApi* | [**deploy_stack**](docs/StackApi.md#deploy_stack) | **POST** /stack | Deploy a new stack
 *StackApi* | [**get_stack**](docs/StackApi.md#get_stack) | **POST** /stack/{name} | Get the list of services of a stack
