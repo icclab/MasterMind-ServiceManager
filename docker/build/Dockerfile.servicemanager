@@ -9,7 +9,7 @@ RUN apk add --update git nginx && \
     pip3 install -r requirements.txt && \
     apk del git && \
     pip3 install gunicorn && \
-    pip3 install .
+    python3 setup.py install
 
 COPY run.sh /
 COPY nginx.conf /etc/nginx/

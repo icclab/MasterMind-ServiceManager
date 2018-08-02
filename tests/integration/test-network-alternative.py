@@ -20,6 +20,7 @@ def read_file(filename: str) -> str:
 
 
 configuration = swagger_client.Configuration()
+# configuration.host = 'http://127.0.0.1:8081/v1'
 configuration.host = 'http://127.0.0.1:8081/v1'
 
 # engine_url='tcp://160.85.2.17:2376'

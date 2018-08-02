@@ -15,5 +15,5 @@ chdir /home/MasterMind-ServiceManager/api
 # gunicorn --workers 3 --bind unix:mastermind.sock \
 #	'app:app_gunicorn_entry(log_config_file=$LOG_CONFIG_FILE, log_level=$LOG_LEVEL)' &
 gunicorn --workers 3 --bind unix:mastermind.sock \
-	'app:app_gunicorn_entry(log_config_file="/home/MasterMind-ServiceManager/api/logging.conf", log_level=20)' &
+	'app:app_gunicorn_entry(log_config_file="/home/MasterMind-ServiceManager/api/logging.conf", log_level=10)' &
 nginx -g 'daemon off;'
