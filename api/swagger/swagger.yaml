@@ -229,6 +229,67 @@ paths:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
 
+  # since we have to provide the credentials with the call, this needs to be
+  # a POST - a GET request with a body proves a little troublesome.
+  /get_networks:
+    post:
+      tags:
+        - "Network"
+      summary: "Get a list of networks from a swarm"
+      description: ""
+      operationId: "get_networks"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "swarm"
+          in: "body"
+          description: "Swarm on which network will be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
+        #         - name: "network"
+        #           in: "body"
+        #           description: "Network to be removed"
+        #           required: true
+        #           schema:
+        #             $ref: "#/definitions/Network"
+        #       responses:
+        200:
+          description: "OK"
+      x-tags:
+        - tag: "Network"
+      x-swagger-router-controller: "api.controllers.network_controller"
+
+  # since we have to provide the credentials with the call, this needs to be
+  # a POST - a GET request with a body proves a little troublesome.
+  /create_network:
+    post:
+      tags:
+        - "Network"
+      summary: "Create a network with a given name"
+      description: ""
+      operationId: "create_network"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "swarm"
+          in: "body"
+          description: "Swarm on which network will be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
+        - name: "network"
+          in: "body"
+          description: "Network to be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Network"
+      responses:
+        200:
+          description: "OK"
+      x-tags:
+        - tag: "Network"
+      x-swagger-router-controller: "api.controllers.network_controller"
 
   /volume:
     get:
