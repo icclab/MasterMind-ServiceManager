@@ -17,7 +17,9 @@ engine_url = 'tcp://160.85.2.17:2376'
 ca_cert_file = '../../../client/secure-docker-socket/ca.pem'
 cert_file = '../../../client/secure-docker-socket/cert.pem'
 cert_key_file = '../../../client/secure-docker-socket/key.pem'
-compose_filename = 'quantum-leap/docker-compose.yml'
+# compose_filename = 'quantum-leap/docker-compose.yml'
+compose_filename = 'mongo-replicaset/docker-compose.yml'
+external_file_list = ['mongo-replicaset/mongo-healthcheck']
 
 
 def read_file(filename: str) -> str:
@@ -73,6 +75,16 @@ def delete_network(network_api_instance, network):
         print("Exception when calling NetworkAPI->create_network: %s\n" % e)
 
 
+def generate_external_files(external_file_list):
+    return_val = []
+    for f in external_file_list:
+        file_content = read_file(f)
+        # return_val.append({f: file_content})
+        return_val.append({'mongo-healthcheck': file_content})
+
+    return return_val
+
+
 def main():
 
     ca_cert = read_file(ca_cert_file)
@@ -89,6 +101,8 @@ def main():
                                      cert_key=cert_key,
                                      name=network_name)
 
+    external_files = generate_external_files(external_file_list)
+    print(str(external_files))
     # create an instance of the API class
     stack_api_instance = swagger_client.StackApi(swagger_client.ApiClient(configuration))
     # stack | Definition of stack to be created
@@ -97,13 +111,13 @@ def main():
                                  cert_key=cert_key,
                                  compose_file=compose_file,
                                  compose_vars="",
-                                 external_files=[],
+                                 external_files=external_files,
                                  name=stack_name)
 
     create_network(network_api_instance, network)
     create_stack(stack_api_instance, stack)
-    delete_stack(stack_api_instance, stack_name, stack)
-    delete_network(network_api_instance, network)
+    # delete_stack(stack_api_instance, stack_name, stack)
+    # delete_network(network_api_instance, network)
 
 
 if __name__ == '__main__':
