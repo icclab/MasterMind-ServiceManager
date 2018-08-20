@@ -59,5 +59,5 @@ networks_response=$(curl -X DELETE \
    -H "Content-Type: Application/json" \
    --data "$json_data" )
 
-echo $networks_response
+jq <<< "$networks_response"
 

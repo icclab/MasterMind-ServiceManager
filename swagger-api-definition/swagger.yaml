@@ -243,7 +243,7 @@ paths:
       parameters:
         - name: "swarm"
           in: "body"
-          description: "Swarm on which network will be created"
+          description: "Swarm whcih we are querying for networks"
           required: true
           schema:
             $ref: "#/definitions/Swarm"
@@ -374,6 +374,67 @@ paths:
         - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
 
+  # since we have to provide the credentials with the call, this needs to be
+  # a POST - a GET request with a body proves a little troublesome.
+  /get_volumes:
+    post:
+      tags:
+        - "Volume"
+      summary: "Get a list of volumes from a swarm"
+      description: ""
+      operationId: "get_volumes_alternative"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "swarm"
+          in: "body"
+          description: "Swarm which we are querying for volumes"
+          required: true
+          schema:
+            $ref: "#/definitions/Swarm"
+      #         - name: "network"
+      #           in: "body"
+      #           description: "Network to be removed"
+      #           required: true
+      #           schema:
+      #             $ref: "#/definitions/Network"
+      responses:
+        200:
+          description: "OK"
+      x-tags:
+        - tag: "Volume"
+      x-swagger-router-controller: "api.controllers.volume_controller"
+
+  # since we have to provide the credentials with the call, this needs to be
+  # a POST - a GET request with a body proves a little troublesome.
+  /create_volume:
+    post:
+      tags:
+        - "Volume"
+      summary: "Create a volume with a given name"
+      description: ""
+      operationId: "create_volume_alternative"
+      produces:
+        - "application/json"
+      parameters:
+        # - name: "swarm"
+        #   in: "body"
+        #   description: "Swarm on which network will be created"
+        #   required: true
+        #   schema:
+        #     $ref: "#/definitions/Swarm"
+        - name: "volume"
+          in: "body"
+          description: "Volume to be created"
+          required: true
+          schema:
+            $ref: "#/definitions/Volume"
+      responses:
+        200:
+          description: "OK"
+      x-tags:
+        - tag: "Volume"
+      x-swagger-router-controller: "api.controllers.volume_controller"
 
 definitions:
   Stack:

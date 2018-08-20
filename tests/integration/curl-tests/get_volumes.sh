@@ -2,7 +2,7 @@
 #
 # A simple script to test the Mastermind-ServiceManager
 
-NETWORKNAME='test-network'
+VOLUMENAME='test-volume'
 MASTERMIND_SERVER='localhost'
 MASTERMIND_PORT='8081'
 CERT_FILE='cert.pem'
@@ -23,13 +23,12 @@ port=${fields[2]}
 
 echo "Working with docker engine on host $host, port $port using protocol $proto"
 
-# POST /create_network
+# POST /get_networks
 # {
 #   "ca-cert": "string",
 #   "cert": "string",
 #   "cert-key": "string",
-#   "engine-url": "string",
-#   "name": "string"
+#   "engine-url": "string"
 # }
 
 FULL_CERT_FILE="$DOCKER_CERT_PATH/$CERT_FILE"
@@ -47,17 +46,15 @@ json_data=$(jq -n \
 		--arg cert "$cert" \
 		--arg key "$key" \
 		--arg url "$DOCKER_HOST" \
-		--arg name "$NETWORKNAME" \
-		'{"ca-cert": $ca, "cert": $cert, "cert-key": $key, "engine-url": $url, "name": $name}' )
+		'{"ca-cert": $ca, "cert": $cert, "cert-key": $key, "engine-url": $url}' )
 # 		.ca-cert "$ca" .cert "$cert" .cert-key "$key" .engine-url "$url" )
 
 # echo $json_data
 
-echo "Creating network $NETWORKNAME"
-networks_response=$(curl -X POST \
-  http://$MASTERMIND_SERVER:$MASTERMIND_PORT/v1/create_network  \
+echo "Getting volumes"
+volumes_response=$(curl -X POST \
+  http://$MASTERMIND_SERVER:$MASTERMIND_PORT/v1/get_volumes  \
    -H "Content-Type: Application/json" \
    --data "$json_data" )
 
-jq <<< "$networks_response"
-
+jq <<< "$volumes_response"

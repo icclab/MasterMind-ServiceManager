@@ -2,7 +2,7 @@
 #
 # A simple script to test the Mastermind-ServiceManager
 
-NETWORKNAME='test-network'
+VOLUMENAME='test-volume'
 MASTERMIND_SERVER='localhost'
 MASTERMIND_PORT='8081'
 CERT_FILE='cert.pem'
@@ -47,17 +47,17 @@ json_data=$(jq -n \
 		--arg cert "$cert" \
 		--arg key "$key" \
 		--arg url "$DOCKER_HOST" \
-		--arg name "$NETWORKNAME" \
+		--arg name "$VOLUMENAME" \
 		'{"ca-cert": $ca, "cert": $cert, "cert-key": $key, "engine-url": $url, "name": $name}' )
 # 		.ca-cert "$ca" .cert "$cert" .cert-key "$key" .engine-url "$url" )
 
 # echo $json_data
 
-echo "Creating network $NETWORKNAME"
-networks_response=$(curl -X POST \
-  http://$MASTERMIND_SERVER:$MASTERMIND_PORT/v1/create_network  \
+echo "Deleting volume $VOLUMENAME"
+volumes_response=$(curl -X DELETE \
+  http://$MASTERMIND_SERVER:$MASTERMIND_PORT/v1/volume/delete \
    -H "Content-Type: Application/json" \
    --data "$json_data" )
 
-jq <<< "$networks_response"
+jq <<< "$volumes_response"
 

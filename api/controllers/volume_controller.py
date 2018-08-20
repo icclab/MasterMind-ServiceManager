@@ -11,6 +11,15 @@ import json
 from docker.errors import APIError
 from requests.exceptions import ConnectionError
 
+
+def get_volumes_alternative(swarm):
+    """
+    GET /v1/network/
+    """
+
+    return get_volumes(swarm)
+
+
 def get_volumes(swarm):
     """
     GET /v1/volume/
@@ -33,12 +42,18 @@ def get_volumes(swarm):
         return response(400, "Connection error, "
                              "please check if the Docker engine is reachable.")
     except APIError:
-        return response(409, "Error creating volume on Swarm")
+        return response(409, "Error retrieving list of volumes from Swarm")
 
     finally:
         if temp_files:
             close_temp_files(temp_files)
-    return response(200, "", json.dumps(volumes))
+
+    print("volumes = {0}".format(str(volumes[1])))
+    return response(200, "", {"volumes": json.dumps(volumes[1])})
+
+
+def create_volume_alternative(volume):
+    return create_volume(volume)
 
 
 def create_volume(volume):
