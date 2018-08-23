@@ -18,8 +18,8 @@ engine_url = 'tcp://160.85.2.17:2376'
 ca_cert_file = '../../../client/secure-docker-socket/ca.pem'
 cert_file = '../../../client/secure-docker-socket/cert.pem'
 cert_key_file = '../../../client/secure-docker-socket/key.pem'
-# compose_filename = 'quantum-leap/docker-compose.yml'
-compose_filename = 'mkguid/docker-compose.yml'
+# compose_filename = '../recipes/quantum-leap/docker-compose.yml'
+compose_filename = '../recipes/mkguid/docker-compose.yml'
 
 
 def read_file(filename: str) -> str:

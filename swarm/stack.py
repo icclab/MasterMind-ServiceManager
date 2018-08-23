@@ -76,7 +76,7 @@ class Stack(object):
             self._tidy_up_failed_deploy()
             return None, None, None
 
-        logger.info("Service created successfully...")
+        logger.info("Stack deployed successfully... - {0} services deployed".format(str(services_created)))
         return self.services, self.networks, self.volumes
 
     def remove(self) -> None:
@@ -365,14 +365,20 @@ class Stack(object):
             print('health_status = {0}'.format(health_status))
             health_array.append({'ContainerID': container_id, 'Health': health_status})
 
-        return_val = dict(
-            name=svc_attrs.get('Name'),
-            status='{0}/{1}'.format(
-                len(service_running_tasks),
-                svc_attrs.get('Mode').get('Replicated').get('Replicas')
-            ),
-            health=health_array
-        )
+
+        print("Mode = {0}".format(str(svc_attrs.get('Mode'))))
+        if svc_attrs.get('Mode').get('Replicated') is not None:
+            return_val = dict(
+                name=svc_attrs.get('Name'),
+                status='{0}/{1}'.format(
+                    len(service_running_tasks),
+                    svc_attrs.get('Mode').get('Replicated').get('Replicas')
+                ),
+                health=health_array
+            )
+        else:
+            return_val = dict(name=svc_attrs.get('Name'), status='Global',
+                              health=health_array)
         print('return_val = {0}'.format(str(return_val)))
         return return_val
 
