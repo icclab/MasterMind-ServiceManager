@@ -103,5 +103,5 @@ ENV/
 .idea/
 .vscode/
 
-./tests/integration/curl-tests/secure-docker-socket/
-./tests/integration/curl-tests/remote_docker_host.sh
+tests/integration/curl-tests/secure-docker-socket/
+tests/integration/curl-tests/remote_docker_host.sh
