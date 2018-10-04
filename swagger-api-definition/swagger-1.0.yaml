@@ -199,7 +199,6 @@ paths:
       x-tags:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
-
   /network/delete:
     delete:
       tags:
@@ -228,7 +227,6 @@ paths:
       x-tags:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
-
   # since we have to provide the credentials with the call, this needs to be
   # a POST - a GET request with a body proves a little troublesome.
   /get_networks:
@@ -259,7 +257,6 @@ paths:
       x-tags:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
-
   # since we have to provide the credentials with the call, this needs to be
   # a POST - a GET request with a body proves a little troublesome.
   /create_network:
@@ -290,7 +287,6 @@ paths:
       x-tags:
         - tag: "Network"
       x-swagger-router-controller: "api.controllers.network_controller"
-
   /volume:
     get:
       tags:
@@ -344,7 +340,6 @@ paths:
       x-tags:
         - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
-
   /volume/delete:
     delete:
       tags:
@@ -373,7 +368,6 @@ paths:
       x-tags:
         - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
-
   # since we have to provide the credentials with the call, this needs to be
   # a POST - a GET request with a body proves a little troublesome.
   /get_volumes:
@@ -404,7 +398,6 @@ paths:
       x-tags:
         - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
-
   # since we have to provide the credentials with the call, this needs to be
   # a POST - a GET request with a body proves a little troublesome.
   /create_volume:
@@ -435,7 +428,6 @@ paths:
       x-tags:
         - tag: "Volume"
       x-swagger-router-controller: "api.controllers.volume_controller"
-
 definitions:
   Stack:
     type: "object"
@@ -491,7 +483,6 @@ definitions:
         type: "string"
       name:
         type: "string"
-
   Volume:
     type: "object"
     required:
