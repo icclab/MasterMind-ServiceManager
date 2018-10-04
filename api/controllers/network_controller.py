@@ -114,7 +114,7 @@ def delete_network(network):
     response_message = "Network deleted."
 
     if deleted == False:
-        if type(exception) == 'NoneType':
+        if exception is None:
             # http not found...
             response_code = 404
             response_message = "Error deleting network - network not found."
