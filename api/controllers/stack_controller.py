@@ -24,12 +24,13 @@ import tempfile
 from jinja2 import Template
 from requests.exceptions import ConnectionError
 from typing import Dict, Tuple
-from yaml import safe_load, scanner
+from yaml import load, safe_load, scanner
 
 from api.models.stack import Stack
 from swarm.stack import Stack as StackCls
 from swarm.exceptions import NetworkNotFound, VolumeNotFound,\
     InvalidYAMLFile
+import swarm.pe
 
 import logging
 
@@ -287,18 +288,24 @@ def parse_compose_file(compose: str, compose_vars: str=None) -> Dict:
     Note that a corresponding value needs to be included in 'compose-vars'.
     """
     try:
+        yaml_dict = load(compose)
         if compose_vars:
-            compose_template = Template(compose,
-                                        variable_start_string='${',
-                                        variable_end_string='}')
-            compose_vars_yaml = safe_load(compose_vars)
-            compose_yaml = compose_template.render(compose_vars_yaml)
+            return_dict = swarm.pe.subst(yaml_dict, compose_vars)
         else:
-            compose_yaml = compose
+            return_dict = yaml_dict
+            # compose_template = Template(compose,
+            #                             variable_start_string='${',
+            #                             variable_end_string='}')
+            # compose_vars_yaml = safe_load(compose_vars)
+            # compose_yaml = compose_template.render(compose_vars_yaml)
+            #  else# :
+            # compose_yaml = compose
 
-        return safe_load(compose_yaml)
+        # return safe_load(compose_yaml)
     except scanner.ScannerError:
         raise InvalidYAMLFile
+
+    return return_dict
 
 
 def response(status_code: int, message: str, *args) -> Tuple[Dict, int]:
