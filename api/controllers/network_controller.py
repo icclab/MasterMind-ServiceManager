@@ -70,7 +70,6 @@ def create_network(network):
                                    swarm.cert_key)
     cli = get_client(swarm.engine_url, tls=temp_files)
 
-    # TODO - add error checking here.
     created, exception = create_swarm_network(cli, network['name'])
 
     response_code = 201
@@ -87,12 +86,12 @@ def create_network(network):
 
     if temp_files:
         close_temp_files(temp_files)
-    
+
     return response(response_code, response_message)
 
 
 def delete_network(network):
-    
+
     """
     DELETE /v1/network/delete/
     """
@@ -109,24 +108,29 @@ def delete_network(network):
                                    swarm.cert_key)
     cli = get_client(swarm.engine_url, tls=temp_files)
 
-    # TODO - add error checking here.
     deleted, exception = delete_swarm_network(cli, network['name'])
 
     response_code = 200
     response_message = "Network deleted."
 
     if deleted == False:
-        print(type(exception))
-        if type(exception) == ConnectionError:
+        if type(exception) == NoneType:
+            # http not found...
+            response_code = 404
+            response_message = "Error deleting network - network not found."
+        elif type(exception) == ConnectionError:
+            # http service unavailable
             response_code = 503
             response_message = "Connection error - please check if the Docker engine is reachable."
-        if type(exception) == APIError:
-            response_code = 409
-            response_message = "Error creating network on Swarm."
+        else:
+            # don't really know what happenned - give back internalservererror
+            print(type(exception))
+            response_code = 500
+            response_message = "Unexpected error deleting network on Swarm."
 
     if temp_files:
         close_temp_files(temp_files)
-    
+
     return response(response_code, response_message)
 
 
